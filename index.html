@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP GASES V2.0.3 — Usuarios y Permisos Enterprise</title>
+<title>ERP GASES V2.0.5 — Almacenamiento IndexedDB Estable</title>
 <style>
 :root{--g:#12643b;--g2:#0b4328;--bg:#f4f8f5;--line:#d8e4dc;--ink:#1f2d25;--muted:#66766c;--blue:#175cd3;--red:#b42318;--amber:#9a6500;--shadow:0 10px 26px rgba(12,65,39,.09)}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -183,7 +183,7 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div id="readonlyBanner" class="readonly-banner">👁️ Modo consulta: puede revisar la información, pero no modificarla.</div>
 <div id="sessionChip" class="session-chip"><div><b id="sessionUser">—</b><br><span id="sessionRole">—</span></div><button id="logoutBtn" data-auth-safe="1">Cerrar sesión</button></div>
 
-<header><div><h1>ERP GASES — Registro y Seguimiento</h1><p>PSI · Laboratorio, informes y seguimiento general</p></div><div class="version">V2.0.4l</div></header>
+<header><div><h1>ERP GASES — Registro y Seguimiento</h1><p>PSI · Laboratorio, informes y seguimiento general</p></div><div class="version">V2.0.8</div></header>
 <nav>
 <div class="module-tabs">
 <button class="active" data-module="mediciones">🌿 MEDICIONES AMBIENTALES <span class="module-count" id="moduleCountMediciones">0</span></button>
@@ -215,28 +215,71 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 </nav>
 <main>
 <section id="registro" class="view active"><div class="card"><h2>Registrar nueva muestra / OT</h2><p class="sub">Todos los desplegables se alimentan de catálogos editables. Cliente y sucursal están relacionados.</p><div class="notice"><b>Flujo directo:</b> REGISTRADA → LABORATORIO. No incluye DQO ni Tensoactivos.</div>
-<div id="sampleLockBanner" class="concurrent-lock-banner"></div><form id="sampleForm"><input type="hidden" id="editId"><div class="grid">
+<div id="sampleLockBanner" class="concurrent-lock-banner"></div>
+<div class="notice" id="sequenceRuleNotice">
+ <b>Secuencias independientes:</b> RR y RG mantienen correlativos separados. 
+ La identificación se define en el catálogo del monitoreo y no puede modificarse durante el registro de la OT.
+</div>
+<form id="sampleForm"><input type="hidden" id="editId"><div class="grid">
 <div class="f w4"><label class="req">Monitoreo</label><div class="combo"><select id="monitoring" required></select><button type="button" class="iconbtn" data-open="monitoring">＋</button></div></div>
-<div class="f"><label class="req">Tipo de medición</label><div class="combo"><select id="measurementType" required></select><button type="button" class="iconbtn" data-open="measurementTypes">＋</button></div></div>
+<div class="f"><label class="req">Tipo de medición</label><div class="combo"><select id="measurementType" required disabled></select><button type="button" class="iconbtn" data-open="measurementTypes">＋</button></div></div>
 <div class="f"><label class="req">N.º de puntos</label><input id="points" type="number" min="1" value="1" required></div>
 <div class="f w6"><label class="req">Cliente</label><div class="combo"><input id="company" list="companyList" autocomplete="off" placeholder="Seleccione o escriba un cliente" required><datalist id="companyList"></datalist><button type="button" class="iconbtn" data-open="clients">＋</button></div><small class="muted">Si escribe un cliente nuevo, se guardará automáticamente en el catálogo.</small></div>
 <div class="f w6"><label>Sucursal / lugar</label><div class="combo"><input id="branch" list="branchList" autocomplete="off" placeholder="Seleccione o escriba una sucursal"><datalist id="branchList"></datalist><button type="button" class="iconbtn" id="quickBranch">＋</button></div><small class="muted">Las sucursales cambian según el cliente. Una nueva se añadirá al catálogo al guardar.</small></div>
 <div class="f"><label class="req">Fecha inicio del trabajo</label><input id="workDate" type="date" required></div>
 <div class="f"><label>Fecha recepción OT</label><input id="receivedDate" type="date" readonly><small class="muted">Se completa al presionar “Enviar a Laboratorio”.</small></div>
-<div class="f"><label class="req">Identificación automática</label><select id="identification" required disabled><option value="RR">RR</option><option value="RG">RG</option></select><small class="muted">Ambiental = RR · Laboral = RG</small></div>
-<div class="f"><label>Número correlativo</label><input id="sequence" type="number" min="1" placeholder="Automático"></div>
+<div class="f"><label class="req">Identificación automática</label><select id="identification" required disabled><option value="RR">RR</option><option value="RG">RG</option></select><small class="muted">Se asigna desde el catálogo del monitoreo y queda bloqueada para esta OT.</small></div>
+<div class="f"><label class="req">Año de numeración</label><input id="sequenceYear" type="number" min="2000" max="2099" step="1" required><small class="muted">Toma por defecto el año vigente configurado. Puede cambiarlo para registrar una OT de un año anterior.</small></div>
+<div class="f"><label>Número correlativo</label><input id="sequence" type="number" min="1" max="9999" placeholder="Automático"><small class="muted">Secuencia independiente por año y por serie RR/RG.</small></div>
 <div class="f w4"><label>Código asignado</label><input id="assignedCode" readonly placeholder="Automático"></div>
 <div class="f w4"><label>Seguimiento OT</label><div class="combo"><select id="otFollow"></select><button type="button" class="iconbtn" data-open="otStatuses">＋</button></div></div>
 <div class="f w4"><label>Responsable de registro</label><div class="combo"><select id="createdBy"></select><button type="button" class="iconbtn" data-open="responsibles">＋</button></div></div>
 <div class="f w12"><label>Observaciones</label><textarea id="observations"></textarea></div>
 </div><div class="actions"><button class="btn primary">Guardar muestra</button><button class="btn secondary" type="button" id="clearForm">Limpiar</button></div></form></div></section>
 
-<section id="registradas" class="view"><div id="statsRegistered" class="stats"></div><div class="card"><div class="toolbar"><div><h2>Muestras registradas</h2><p class="sub">Edite o envíe directamente a Laboratorio.</p></div><input id="searchRegistered" class="search" placeholder="Buscar cliente, sucursal, código..."></div><div id="registeredTable"></div></div></section>
+<section id="registradas" class="view"><div id="statsRegistered" class="stats"></div><div class="card"><div class="toolbar"><div><h2>Muestras registradas</h2><p class="sub">Edite o envíe individualmente o en grupo directamente a Laboratorio.</p></div><input id="searchRegistered" class="search" placeholder="Buscar cliente, sucursal, código..."></div>
+
+
+<div class="batchbar sort-control-bar">
+ <label>Ordenar por</label>
+ <select id="registeredSortField" style="width:auto"><option value="code" selected>Código OT</option><option value="date">Fecha de trabajo</option><option value="client">Cliente</option><option value="monitoring">Monitoreo</option><option value="points">Puntos</option></select>
+ <label>Dirección</label>
+ <select id="registeredSortDirection" style="width:auto">
+  <option value="asc">⬆ Ascendente</option>
+  <option value="desc" selected>⬇ Descendente</option>
+ </select>
+</div>
+<div class="batchbar">
+ <button type="button" class="btn secondary small" id="selectVisibleRegistered">☑ Seleccionar visibles</button>
+ <button type="button" class="btn secondary small" id="clearRegisteredSelection">□ Limpiar selección</button>
+ <label>Fecha de recepción OT</label>
+ <input id="batchReceptionDate" type="date">
+ <button type="button" class="btn primary" id="sendSelectedToLab">🏥 Enviar seleccionadas a Laboratorio</button>
+ <span class="badge" id="selectedRegisteredCount">0 seleccionadas</span>
+</div>
+<div class="notice"><b>Envío múltiple:</b> la misma fecha de recepción se aplicará a todas las OT seleccionadas. Cada OT conservará su UUID, código y trazabilidad individual.</div>
+<div id="registeredTable"></div></div></section>
 <section id="laboratorio" class="view">
 <div id="statsLab" class="stats"></div>
 <div class="card">
 <div class="toolbar"><div><h2>🏥 Ingreso oficial al Laboratorio</h2><p class="sub">Las OT enviadas desde Muestras registradas llegan aquí. Revise, complete y confirme su ingreso oficial.</p></div><input id="searchLab" class="search" placeholder="Buscar cliente, código o monitoreo..."></div>
-<div class="notice"><b>Secuencia:</b> LABORATORIO → INGRESAR OFICIALMENTE → INFORME PENDIENTE. Al confirmar se calcula automáticamente la fecha máxima de emisión.</div>
+
+<div class="batchbar sort-control-bar">
+ <label>Ordenar por</label>
+ <select id="laboratorySortField" style="width:auto"><option value="receivedDate" selected>Fecha de recepción</option><option value="code">Código OT</option><option value="client">Cliente</option><option value="monitoring">Monitoreo</option><option value="points">Puntos</option></select>
+ <label>Dirección</label>
+ <select id="laboratorySortDirection" style="width:auto">
+  <option value="asc" selected>⬆ Ascendente</option>
+  <option value="desc">⬇ Descendente</option>
+ </select>
+</div>
+<div class="batchbar">
+ <button type="button" class="btn secondary small" id="selectVisibleLaboratory">☑ Seleccionar visibles</button>
+ <button type="button" class="btn secondary small" id="clearLaboratorySelection">□ Limpiar selección</button>
+ <button type="button" class="btn primary" id="officialEntrySelected">✅ Ingresar oficialmente seleccionadas</button>
+ <span class="badge" id="selectedLaboratoryCount">0 seleccionadas</span>
+</div>
+<div class="notice"><b>Ingreso múltiple directo:</b> se asume que los datos actuales están correctos. Cada OT pasará de LABORATORIO a INFORME PENDIENTE, usando su fecha de recepción, responsable registrado y plazo estándar de 8 días si no tiene uno definido.</div>
 <div id="labTable"></div></div>
 <div class="card">
 <div class="toolbar"><div><h2>✅ Informes ingresados / control general</h2><p class="sub">Aquí permanecen todas las OT que ya fueron ingresadas oficialmente al Laboratorio. Podrá revisar su avance completo hasta autorización.</p></div><input id="searchLabGeneral" class="search" placeholder="Buscar código, cliente, sucursal, analista o estado..."></div>
@@ -270,6 +313,16 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div id="statsReports" class="stats"></div>
 <div class="card">
 <div class="toolbar"><div><h2>📄 Informes pendientes de entrega real</h2><p class="sub">Registre la fecha real de entrega. Puede guardar uno por uno o seleccionar varios registros y aplicar una misma fecha.</p></div><input id="searchReports" class="search" placeholder="Buscar cliente, código, analista..."></div>
+
+<div class="batchbar sort-control-bar">
+ <label>Ordenar por</label>
+ <select id="reportsSortField" style="width:auto"><option value="maxReportDate" selected>Fecha compromiso</option><option value="code">Código OT</option><option value="receivedDate">Fecha de recepción</option><option value="client">Cliente</option><option value="monitoring">Monitoreo</option></select>
+ <label>Dirección</label>
+ <select id="reportsSortDirection" style="width:auto">
+  <option value="asc" selected>⬆ Ascendente</option>
+  <option value="desc">⬇ Descendente</option>
+ </select>
+</div>
 <div class="batchbar"><button class="btn secondary small" id="selectVisibleReports">☑ Seleccionar visibles</button><button class="btn secondary small" id="clearReportSelection">□ Limpiar selección</button><label>Fecha seleccionados</label><input id="batchRealDate" type="date"><button class="btn primary" id="saveSelectedRealDates">💾 Guardar seleccionados</button><span class="badge" id="selectedReportCount">0 seleccionados</span></div>
 <div class="notice"><b>Flujo:</b> INFORME PENDIENTE → registrar FECHA REAL DE ENTREGA → AUTORIZACIÓN. Los registros guardados desaparecen de esta bandeja y migran automáticamente al módulo Autorización.</div>
 <div id="reportsTable"></div></div>
@@ -295,6 +348,16 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div class="card">
 <div class="toolbar"><div><h2>💰 Facturación — Control administrativo</h2><p class="sub">Se alimenta automáticamente con todas las OT ingresadas oficialmente al Laboratorio. Los datos técnicos permanecen bloqueados y únicamente se completan los campos de facturación.</p></div><button class="btn primary" id="saveVisibleBilling">💾 Guardar visibles</button></div>
 <div class="notice"><b>Origen automático:</b> Informes ingresados / control general. Se muestran Código, Cliente, Sucursal, Monitoreo, Puntos y Recepción. Complete Cotización, Factura, Fecha de factura, Subtotal, Estado y una observación administrativa detallada. La observación queda vinculada permanentemente a la OT.</div>
+
+<div class="batchbar sort-control-bar">
+ <label>Ordenar por</label>
+ <select id="billingSortField" style="width:auto"><option value="invoiceDate" selected>Fecha de factura</option><option value="code">Código OT</option><option value="receivedDate">Fecha de recepción</option><option value="client">Cliente</option><option value="subtotal">Subtotal</option></select>
+ <label>Dirección</label>
+ <select id="billingSortDirection" style="width:auto">
+  <option value="asc" selected>⬆ Ascendente</option>
+  <option value="desc">⬇ Descendente</option>
+ </select>
+</div>
 <div class="batchbar">
 <input id="billingSearch" class="search" placeholder="Buscar código, cliente, sucursal, cotización o factura...">
 <select id="billingMonth" style="width:auto"><option value="">Todos los meses</option><option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option><option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option><option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
@@ -387,6 +450,19 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 </section>
 
 <section id="catalogos" class="view">
+<div class="card" id="sequenceYearConfigCard">
+  <div class="toolbar">
+    <div><h2>📅 Año vigente y secuencias RR/RG</h2><p class="sub">Define el año que aparecerá por defecto al registrar una OT. El año puede cambiarse individualmente en el formulario para ingresar registros históricos.</p></div>
+    <span class="badge on" id="activeYearBadge">AÑO VIGENTE</span>
+  </div>
+  <div class="grid">
+    <div class="f w4"><label class="req">Año vigente del ERP</label><input id="activeSequenceYear" type="number" min="2000" max="2099" step="1"></div>
+    <div class="f w4"><label>Próximo RR del año</label><input id="nextRRPreview" readonly></div>
+    <div class="f w4"><label>Próximo RG del año</label><input id="nextRGPreview" readonly></div>
+  </div>
+  <div class="actions"><button type="button" class="btn primary" id="saveActiveSequenceYear">Guardar año vigente</button></div>
+  <div class="notice" style="margin-top:12px;margin-bottom:0"><b>Ejemplo:</b> con año vigente 2027, las nuevas series comienzan en <b>RR270001</b> y <b>RG270001</b>. Para registrar una OT de 2025, seleccione 2025 en “Año de numeración” y el sistema continuará la secuencia propia de 2025.</div>
+</div>
 <div class="card"><h2>Administración de catálogos</h2><p class="sub">Puede agregar, corregir, desactivar o eliminar opciones. Los cambios se reflejan inmediatamente en los desplegables.</p>
 <div class="tabs">
 <button class="active" data-cat="clients">Clientes y sucursales</button><button data-cat="monitoring">Monitoreos</button><button data-cat="simple">Otros catálogos</button>
@@ -500,12 +576,12 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 </div><div class="actions"><button class="btn primary">Guardar cliente</button><button type="button" class="btn secondary" data-close="clientModal">Cancelar</button></div></form></div></div>
 
 <div id="monitorModal" class="modal"><div class="modal-box"><div class="modal-head"><h2>Monitoreo</h2><button class="close" data-close="monitorModal">×</button></div>
-<form id="monitorForm"><input type="hidden" id="monitorIndex"><div class="grid"><div class="f w6"><label class="req">Nombre</label><input id="monitorName" required></div><div class="f"><label class="req">Tipo de medición</label><select id="monitorType"></select></div><div class="f"><label>Identificación automática</label><input id="monitorIdentification" readonly></div></div><div class="actions"><button class="btn primary">Guardar monitoreo</button><button type="button" class="btn secondary" data-close="monitorModal">Cancelar</button></div></form></div></div>
+<form id="monitorForm"><input type="hidden" id="monitorIndex"><div class="grid"><div class="f w6"><label class="req">Nombre</label><input id="monitorName" required></div><div class="f"><label class="req">Tipo de medición</label><select id="monitorType"></select></div><div class="f"><label class="req">Identificación automática</label><select id="monitorIdentification" required><option value="RR">RR</option><option value="RG">RG</option></select></div></div><div class="actions"><button class="btn primary">Guardar monitoreo</button><button type="button" class="btn secondary" data-close="monitorModal">Cancelar</button></div></form></div></div>
 
 <script>
 const DEFAULT_CLIENTS=[{"id":"1001TALLERES1","name":"1001TALLERES S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"JUAN TANCA MARENGO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"ACERIAXINLON2","name":"ACERIA XINLONG S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPN","RAPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF","CAMPOS O  RADIACION ELECTROMAGNETICA"],"branches":[{"name":"MILAGRO","records":4,"frequency":"Histórico 2026","active":true}]},{"id":"ADITECECUATO3","name":"ADITEC ECUATORIANA CIA. LTDA.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["PM10-2.5-24H","RAPD"],"branches":[]},{"id":"AGRICONMINSA4","name":"AGRICONMINSA AGRICOLA COMERCIAL INDUSTRIAL","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["DOSIMETRIAS","RLPD","RAPD"],"branches":[{"name":"Matriz","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"AGUASDESAMBO5","name":"AGUAS DE SAMBORONDON AMAGUA C.E.M.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["LUXPD","VBR - CE (VIBRACION CUERPO ENTERO)"],"branches":[{"name":"SAMBORONDON","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"AJECUADORSA6","name":"AJECUADORS.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"CADIS MANTA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"ALFAFRESHSA7","name":"ALFAFRESH S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":6,"monitorings":["SCREENING DE ESTRÉS TERMICO","LUXPD","RLPD","LUXP - POR AREAS"],"branches":[]},{"id":"ALMACENESDEP8","name":"ALMACENES DE PRATI S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RLPD","VBR - MB (VIBRACION MANO BRAZO)"],"branches":[{"name":"DURÁN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"ALMACENESDEP9","name":"ALMACENES DEPRATI","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RLPD"],"branches":[{"name":"DURÁN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"ARCHITEKTON10","name":"ARCHITEKTON","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD"],"branches":[{"name":"OFICINAS SANTIAGO","records":1,"frequency":"Histórico 2026","active":true},{"name":"HOTEL SANTIAGO","records":1,"frequency":"Histórico 2026","active":true},{"name":"HOTEL RADISSON","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"AUTOSHARECOR11","name":"AUTOSHARECORP S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":35,"monitorings":["RAPD","LUXPD","DOSIMETRIAS","PM10-2.5-24H","COVS"],"branches":[{"name":"AGENCIA MACHALA","records":5,"frequency":"Histórico 2026","active":true},{"name":"CARLOSJULIO AROSEMENA","records":5,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA PORTOVIEJO","records":4,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA MANTA","records":4,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA ORELLANA","records":4,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA LA Y","records":4,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA TUMBACO","records":3,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA DORADO","records":3,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA SAMBORONDON","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"AYLUARDOCEDE12","name":"AYLUARDO CEDENO GIOVANNI OLIVERIO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","RAPN"],"branches":[{"name":"PROYECTO CEIBOS","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"BORSEASA13","name":"BORSEA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF"],"branches":[{"name":"VIA DAULE","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"CABANISA14","name":"CABANI S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"MATRIZ","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CALIZASHUAYC15","name":"CALIZAS HUAYCO S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":20,"monitorings":["RAPD","PM10-2.5-24H","PM10-24H","PM10-2.5-2H","PM10-2.5-10H"],"branches":[{"name":"Area Minera A Guay Ampliación Precón","records":4,"frequency":"Histórico 2026","active":true},{"name":"PLANTA AGREGADO PRECON","records":2,"frequency":"Histórico 2026","active":true},{"name":"PLANTA DE AGREGADOS DE HUAYCO -","records":2,"frequency":"Histórico 2026","active":true},{"name":"ÁREA MINERA A GUAY EL HUAYCO VIA A LA COSTA-VOLADURA","records":2,"frequency":"Histórico 2026","active":true},{"name":"MIRBET","records":2,"frequency":"Histórico 2026","active":true},{"name":"DIMIDIUM S.A.","records":2,"frequency":"Histórico 2026","active":true},{"name":"VOLADURA","records":2,"frequency":"Histórico 2026","active":true},{"name":"AGREGADOS PRECON","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CAMARONERALA16","name":"CAMARONERA LA COMARCA DCMC S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"MATRIZ","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CAMATAURA17","name":"CAMATAURA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"TAURA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CARGILLAQUAN18","name":"CARGILL AQUANUTRITION ECUADOR CIA.LTDA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["LUXPN"],"branches":[{"name":"VIA A LA  COSTA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"CARGOPORTSA19","name":"CARGOPORT S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","PM10-2.5-24H"],"branches":[]},{"id":"CHAMPIONTECH20","name":"CHAMPION TECHNOLOGIES DEL ECUADOR","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"QUITO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"CHIVERIASA21","name":"CHIVERIA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"CIMENTACIONE22","name":"CIMENTACIONES GENERALES Y OBRAS PORTUARIAS CIPORT S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["LUXPD","DOSIMETRIAS"],"branches":[]},{"id":"CODANASA23","name":"CODANA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":16,"monitorings":["EVALUACION Y ANALISIS DE MOVIMIENTOS REPETITIVOS*","ILUMINACION","EVALUACION ERGONOMICA SIMPLE DE POSTURAS*","DETERMINACION DE BACTERIAS AEROBIAS TOTALES, MOHOS Y LEVADURAS*","MEDICION Y ANALISIS DE LA RESPUESTA FISIOLOGICA AL ESTRES TERMICO*"],"branches":[{"name":"MILAGRO","records":16,"frequency":"Histórico 2026","active":true}]},{"id":"COFIMARSA24","name":"COFIMAR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":11,"monitorings":["SCREENING DE ESTRÉS TERMICO","LUXPD","DOSIMETRIAS","ERGONOMIA"],"branches":[{"name":"PC1","records":6,"frequency":"Histórico 2026","active":true},{"name":"PC2","records":5,"frequency":"Histórico 2026","active":true}]},{"id":"COLGATEPALMO25","name":"COLGATE PALMOLIVE DEL ECUADOR S.A.I.C.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":8,"monitorings":["MEDICION DE LA EXPOSICION DE PARTICULAS SUSPENDIDAS TOTALES*","MEDICIONES EN PUESTOS DE TRABAJO-ILUMINACION (DIURNO)*","VIBRACIONES CUERPO ENTERO/MANO-BRAZO*","MEDICION SCREENING DE ESTRES TERMICO (PUNTUAL)*","RUIDO EN PUESTOS DE TRABAJO*"],"branches":[{"name":"VIA DAULE","records":7,"frequency":"Histórico 2026","active":true},{"name":"VIA A DAULE","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"COMERCIALAGR26","name":"COMERCIAL AGRO FARM","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"MILAGRO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"COMPAIAANONI27","name":"COMPAÑIA ANONIMA MORETRAN","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RLPD"],"branches":[{"name":"MAPA ISOFONAS","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"COMPAIADETRA28","name":"COMPAÑIA DE TRANSPORTE DE CARGA PESADA TRANSVICME","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["COVS","GCFM + NUMERO DE HUMO","RAPD"],"branches":[{"name":"KM 14,5 VIA A DAULE","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"COMPAAAZUCAR29","name":"COMPAÑÍA AZUCARERA VALDEZ","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","RAPN"],"branches":[{"name":"MILAGRO","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"COMPUJASASA30","name":"COMPUJASA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"CONOSCAMPEN31","name":"CONOS CAMPEÓN","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","CO,NO2,SO2(8-24H)"],"branches":[]},{"id":"CONSORCIOBAL32","name":"CONSORCIO BALBANERA CUMANDA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"CONSORCIOPEP33","name":"CONSORCIO PEP LA RIOJA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","PM10-2.5-24H"],"branches":[{"name":"LA RIOJA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CONSTRUCCION34","name":"CONSTRUCCIONES CIVILES Y METALICAS CONSTRUME S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD","COVS"],"branches":[{"name":"TALLER 2","records":2,"frequency":"Histórico 2026","active":true},{"name":"TALLER 1","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CONSTRUCCION35","name":"CONSTRUCCIONES Y ARQUITECTURA RABE S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"CORPORACIONF36","name":"CORPORACION FAVORITA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"SUPERMAXI VISTANA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"CORPORACIONS37","name":"CORPORACION SICORPMATTRESS S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPN","PM10-24H"],"branches":[{"name":"DURAN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"CORPORACINEL38","name":"CORPORACIÓN EL ROSADO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD","RAPN"],"branches":[{"name":"MINI MI COMISARIATO LAS CUADRAS","records":4,"frequency":"Histórico 2026","active":true}]},{"id":"DEPCONSA39","name":"DEPCONSA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RLPD","RAPD"],"branches":[{"name":"MATRIZ","records":2,"frequency":"Histórico 2026","active":true},{"name":"Patio 2","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"DICOMTRIZSA40","name":"DICOMTRIZ S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":12,"monitorings":["COVS","CO,NO2,SO2(1-8-24H)+ PM10-2.5 24H"],"branches":[{"name":"EDS.AMAZONAS","records":6,"frequency":"Histórico 2026","active":true},{"name":"EDS PETROAMAZONA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. AMAZONAS","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.AMAZONAS - Pozo De Monitoreo PM","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.AMAZONAS - Pozo De Remediación PW","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.AMAZONAS - Pozo De Extracción de Vapores PEV","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.AMAZONAS - Pozo Comprobatorio PCR","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"DISTRIBUIDOR41","name":"DISTRIBUIDORA CESAR BORJA DISTRIBORJA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["COVS"],"branches":[{"name":"EDS. BASTIÓN POPULAR","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"DROCARASINDU42","name":"DROCARAS INDUSTRIA Y REPRESENTACIONES S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RLPD","CONFORT O ESTRÉS TERMICO PUNTUAL","RAPD","PM10-2.5-24H"],"branches":[{"name":"DURÁN","records":4,"frequency":"Histórico 2026","active":true}]},{"id":"ECOELECTRICS43","name":"ECOELECTRIC S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","RAPN"],"branches":[{"name":"MILAGRO","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"ECUACOTTONSA44","name":"ECUACOTTON S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPN","RAPD"],"branches":[{"name":"VIA D AULE","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"EDIPLARQCOMP45","name":"EDIPLARQCOMPANY S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"km 13,5 VIA A LA COSTA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"EMPACADORAGR46","name":"EMPACADORA GRUPO GRANMAR S.A. EMPAGRAN","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RLPD"],"branches":[{"name":"PUNTA CARNERO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"EMPREACUASA47","name":"EMPREACUA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"EQUIPOSYTRAN48","name":"EQUIPOS Y TRANSPORTES S.A. EQUITRANSA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["RAPD","PM10-2.5-24H","GASES EN FUENTES FIJAS(CO,NOX,SO2)","CO,CO2,NO2,SO2,O3,PM10, PM2.5"],"branches":[{"name":"JUJAN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"ETIFLEX49","name":"ETIFLEX","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["LUXPD"],"branches":[{"name":"DURÁN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"ETINARSA50","name":"ETINAR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":13,"monitorings":["RAPD","PM10-2.5-24H","RAPN","RLPD","PM10-24H"],"branches":[{"name":"HOSPITAL CAMPANA","records":6,"frequency":"Histórico 2026","active":true},{"name":"AGORA","records":2,"frequency":"Histórico 2026","active":true},{"name":"MAXXIMUS-ENERO","records":1,"frequency":"Histórico 2026","active":true},{"name":"PROYECTO MAXIMUS-FEBRERO","records":1,"frequency":"Histórico 2026","active":true},{"name":"PROYECTO MAXIMUS-MARZO","records":1,"frequency":"Histórico 2026","active":true},{"name":"PROYECTO MAXIMUS-ABRIL","records":1,"frequency":"Histórico 2026","active":true},{"name":"PROYECTO MAXIMUS-MAYO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"EXPOPLASTSA51","name":"EXPOPLAST S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["LUXPD"],"branches":[]},{"id":"EXPOSYNERGYS52","name":"EXPOSYNERGY S.A.S.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RLPD","LUXPD","SCREENING DE ESTRÉS TERMICO"],"branches":[{"name":"DURÁN","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"FADESAMANTAS53","name":"FADESA MANTA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPN","RAPD"],"branches":[{"name":"PLANTA MANTA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"FIBRASNACION54","name":"FIBRAS NACIONALES","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","PM10-2.5-24H"],"branches":[]},{"id":"FIDEICOMISOT55","name":"FIDEICOMISO TITULARIZACION OMNIHOSPITAL","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["DOSIMETRIAS","LUXPN"],"branches":[{"name":"AV. ABEL R. CASTILLO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"FILARETSA56","name":"FILARET S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["LUXPD","RAPD"],"branches":[{"name":"DURÁN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"FILIBONSA57","name":"FILIBON S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"GALAPAGOS","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"FORTIDEXSA58","name":"FORTIDEX S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":6,"monitorings":["DOSIMETRIAS","LUXPN","SCREENING DE ESTRÉS TERMICO","NH3","CO"],"branches":[{"name":"POSORJA","records":6,"frequency":"Histórico 2026","active":true}]},{"id":"FRESKBANA59","name":"FRESKBANA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["LUXPD"],"branches":[]},{"id":"FRUTERADONMA60","name":"FRUTERA DON MARCOS FRUDONMAR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"PLANTA DURAN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"FRUTRADESAS61","name":"FRUTRADE S.A.S","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["LUXPD","RLPD","LUXPN","DOSIMETRIAS"],"branches":[{"name":"MATRIZ","records":3,"frequency":"Histórico 2026","active":true},{"name":"VIA A LA COSTA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"GAIBORARCOSG62","name":"GAIBOR ARCOS GINGER ERCILIA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPN"],"branches":[{"name":"SAN ANTONIO-PLAYAS","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"GISISSA63","name":"GISIS S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["PARTICULAS SEDIMENTABLES-30DIAS"],"branches":[{"name":"DURÁN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"GLOBALECUADO64","name":"GLOBALECUADOR CIA LTDA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"GRAFICASIMPA65","name":"GRAFICAS IMPACTO GRAFIMPAC S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["RLPD","LUXPD","COVS","PARTICULAS RESPIRABLES -8H","ERGONOMIA"],"branches":[{"name":"KM 10 VIA A DAULE","records":5,"frequency":"Histórico 2026","active":true}]},{"id":"GRAFICASJALO66","name":"GRAFICAS JALON ENAJA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["LUXPD","SCREENING DE ESTRÉS TERMICO"],"branches":[{"name":"VIA DAULE","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"GRUPOAQUA67","name":"GRUPOAQUA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"GRUVALCORP68","name":"GRUVALCORP","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["PM10-2.5-24H","RAPD"],"branches":[{"name":"PLANTA DURÁN-POR OBSERVACIÓN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"HOVHOTELERAQ69","name":"H.O.V HOTELERA QUITO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","PM10-2.5-24H"],"branches":[]},{"id":"HAIDECUADORF70","name":"HAID (ECUADOR) FEED CIA. LTDA.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["RAPD","RAPN","PM 10, 2.5.","PM10-2.5-24H"],"branches":[{"name":"DURÁN","records":3,"frequency":"Histórico 2026","active":true},{"name":"DURAN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"IASASA71","name":"IASA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":7,"monitorings":["RAPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)","PM10-2.5 PUNTUAL"],"branches":[{"name":"AGENCIA MATRIZ","records":3,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA LOJA","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENICA TRANSPORTE","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA TRANSPORTE","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA AURORA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUAUTOSA72","name":"INDUAUTO S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD"],"branches":[{"name":"AGENCIA BABAHOYO","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA 10 DE AGOSTO","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA MAQSUM","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA MILAGRO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUSTRIACAR73","name":"INDUSTRIA CARTONERA ECUATORIANA S.A.-AUDITORIA PSI","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF"],"branches":[{"name":"AUDITORIA NC GASES-NO COBRAR","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUSTRIALPE74","name":"INDUSTRIAL PESQUERA SANTA PRISCILA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":8,"monitorings":["RAPD"],"branches":[{"name":"PLANTA 7KM 7.5 VIA A DAULE","records":2,"frequency":"Histórico 2026","active":true},{"name":"PLANTA 4 KM 5JTM","records":2,"frequency":"Histórico 2026","active":true},{"name":"planta 1 km 5.5. via a daule","records":1,"frequency":"Histórico 2026","active":true},{"name":"PLANTA 1 KM 5.5. VIA A DAULE","records":1,"frequency":"Histórico 2026","active":true},{"name":"PLANTA 2KM 5JTM","records":1,"frequency":"Histórico 2026","active":true},{"name":"PLANTA 2 KM 5JTM","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUSTRIASRE75","name":"INDUSTRIAS REUNIDAS CIA. LTDA. INDUNIDAS LABORATORIOS INDUNI","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"VIA A DAULE","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUSURINDUS76","name":"INDUSUR INDUSTRIAL DEL SUR","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD"],"branches":[{"name":"PANAMERICANA","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA SANGOLQUI","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA PERIMETRAL","records":1,"frequency":"Histórico 2026","active":true},{"name":"AGENCIA DURAN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INDUWAGEN77","name":"INDUWAGEN","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"NO TOMAR EN CUENTA","records":1,"frequency":"Histórico 2026","active":true},{"name":"MATRIZ","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"INMOBLIARIAM78","name":"INMOBLIARIA MOTKE","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"PASEO SHOPPING RIOBAMBA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"INTERCIASA79","name":"INTERCIA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"KM 26","records":1,"frequency":"Histórico 2026","active":true},{"name":"KM 9.5","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"IPACSA80","name":"IPAC S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["PM10-2.5-24H","CO, NOX, SO2 +PT","RAPD"],"branches":[{"name":"PLANTA 1","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"JESUSELGRANP81","name":"JESUS EL GRAN PODER","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"CAMARONERA JESUS EL GRAN PODER","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"JORIGOM82","name":"JORIGOM","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"JUANCARLOSER83","name":"JUAN CARLOS ERAZO CASTRO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["PM10-2.5-24H","RAPD"],"branches":[{"name":"ISIDRO AYORA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"KARTEXASACON84","name":"KARTEXA S.A. (CONSTRUCTORA THALIA VICTORIA)","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"URB. COSTA SOL","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"KEMCEPSA85","name":"KEMCEPSA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","DOSIMETRIAS"],"branches":[{"name":"DOMINGO COMIN","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"LABMACSA86","name":"LABMAC S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["LUXPD"],"branches":[{"name":"DURÁN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"LAMIFORMICLT87","name":"LAMIFORMI C.LTDA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["MEDICION DE RADIACION NO IONIZANTE UV*","MEDICION DE LA EXPOSICION DE PARTICULAS SUSPENDIDAS TOTALES*","ESTRES TERMICO"],"branches":[{"name":"TAURA","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"LAMINCHILE88","name":"LAMINCHILE","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"MATRIZ","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"LIBRE89","name":"LIBRE","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["CO,NO2,SO2(1-8-24H)+ PM10-2.5 24H","RAPD"],"branches":[]},{"id":"LOGISTICABAN90","name":"LOGISTICA BANANERA S.A LOGBAN","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["PM10-2.5-24H","RAPD"],"branches":[{"name":"DURÁN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"LUBRICANTESI91","name":"LUBRICANTES INTERNACIONALES S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD","RLPD"],"branches":[{"name":"PLANTA DURAN","records":2,"frequency":"Histórico 2026","active":true},{"name":"PLANTA PASCUALES","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"LUBRIVALSA92","name":"LUBRIVAL S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)","DOSIMETRIAS","RAPD","LUXPD"],"branches":[{"name":"SUR","records":5,"frequency":"Histórico 2026","active":true}]},{"id":"LUISENRIQUEC93","name":"LUIS ENRIQUE COELLO ESPINOZA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":9,"monitorings":["RAPD"],"branches":[{"name":"OCEAN ICE","records":1,"frequency":"Histórico 2026","active":true},{"name":"TUVAL","records":1,"frequency":"Histórico 2026","active":true},{"name":"CORLAPROD","records":1,"frequency":"Histórico 2026","active":true},{"name":"NEGOMULTIPLES","records":1,"frequency":"Histórico 2026","active":true},{"name":"GESTORA DE PRODUCTOS ALIMENTICIOS GESPRALSA S.A.","records":1,"frequency":"Histórico 2026","active":true},{"name":"SUDAMTEL","records":1,"frequency":"Histórico 2026","active":true},{"name":"MJD SEAFOOD","records":1,"frequency":"Histórico 2026","active":true},{"name":"TECNICENTRO GALLEGOS","records":1,"frequency":"Histórico 2026","active":true},{"name":"SANIGROUP","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"MACIASSOLAFR94","name":"MACIAS SOLA FRANKLIN JIOVANY","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["COVS","GCFM + NUMERO DE HUMO","RAPD"],"branches":[{"name":"COMPAÑÍA DE TRANSPORTE PESADO JARETMAC","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"MACTERRASA95","name":"MACTERRA S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"BODEGA CEDRAX","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"MAGNUMICCECU96","name":"MAGNUM-ICC ECUADOR S.A.S.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RAPN","GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF"],"branches":[{"name":"PLANTA PINGÜINO","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"MARAMAR97","name":"MARAMAR","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RLPD"],"branches":[]},{"id":"MARESTROPICA98","name":"MARES TROPICALES MARTROPIC S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"INMACONSA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"METROCARSA99","name":"METROCAR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"MANTA","records":1,"frequency":"Histórico 2026","active":true},{"name":"PORTOVIEJO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"MEXICHEMECUA100","name":"MEXICHEM ECUADOR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["ERGONOMIA POSTURAS FORZADAS","ERGONOMIA MANEJO DE CARGAS","ERGONOMIA"],"branches":[{"name":"DURÁN","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"MOTOINDUSTRI101","name":"MOTOINDUSTRIA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","COVS"],"branches":[{"name":"DURÁN","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"MOTORESYTRAC102","name":"MOTORES Y TRACTORES MOTRAC","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"AGENCIA DURÁN","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"MULTIQUIPSA103","name":"MULTIQUIP S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"MURZITORRESE104","name":"MURZI TORRES EXHPO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"BRENTTAH KM 9.5","records":1,"frequency":"Histórico 2026","active":true},{"name":"BRENTAG KM 15","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"NEWYORKERSA105","name":"NEW YORKER S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","RLPD"],"branches":[{"name":"PARQUE CALIFORNIA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"NILBRISA106","name":"NILBRI S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["CO**+NO2**+SO2 (24 HORAS)**+O3 (8 HORAS)**+PM10 Y PM2.5 (24 HORAS)**"],"branches":[{"name":"MONTALVO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"NPDGLOBALSUP107","name":"NPD GLOBAL SUPPLIERS S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["LUXP - POR AREAS","RLPN"],"branches":[]},{"id":"NUCOPSASA108","name":"NUCOPSA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":42,"monitorings":["CO,NO2,SO2(1-8-24H)+ PM10-2.5 24H","RAPD"],"branches":[{"name":"EDS. PASCUALES","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. ARIZAGA","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. LABRADOR","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. CENTRAL","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. PANASUR","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. BARCELONA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. PRADERA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. CENTENARIO","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. CORDOVA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. FAE 2","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS, FAE 1","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. KENNEDY","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.PEGASO","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. DURAN","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.BENEFICENCIA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. ECOLOGICA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. CEIBOS","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.ABU DABI","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.NARCISA DE JESUS","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.BONACO","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.ORIENTAL","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS.SUPERMOBIL","records":1,"frequency":"Histórico 2026","active":true},{"name":"SHELL AEROPUERTO","records":1,"frequency":"Histórico 2026","active":true},{"name":"SHELL CENTRO","records":1,"frequency":"Histórico 2026","active":true},{"name":"SHELL MARINA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. BONACO","records":1,"frequency":"Histórico 2026","active":true},{"name":"SHELL SAMBOFUEL","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. DURÁN","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. AEROPUERTO","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. CENTRO","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. MARINA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. AMAZONAS","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. ORIENTAL","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. SUPERMOBIL","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. ABU DABI","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"OFFSETABADCA109","name":"OFFSET ABAD C.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RAPN","PM10-2.5-24H"],"branches":[{"name":"VIA A DAULE","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"PANBAGUETTES110","name":"PAN BAGUETTE S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["ILUMINACION"],"branches":[{"name":"SUR","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PANAKRUZSA111","name":"PANAKRUZ S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"GALAPAGOS","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"PICAPLASTICO112","name":"PICA PLASTICOS INDUSTRIALES C.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD"],"branches":[{"name":"CALZADO","records":1,"frequency":"Histórico 2026","active":true},{"name":"INYECCION","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PIGALLESAS113","name":"PIGALLE S.A.S","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"CAMARONERA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PINTURASUNID114","name":"PINTURAS UNIDAS","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"PLASCASA115","name":"PLASCA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RAPD","COVS"],"branches":[{"name":"PLANTA DURAN","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"PLAZATIAUNO116","name":"PLAZA TIA UNO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"PORCONECUPOR117","name":"PORCONECU PORCIONES CONTROLADAS ECUATORIANAS S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"PROCESADORAP118","name":"PROCESADORA POSORJA PROPOSORJA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":19,"monitorings":["CONFORT O ESTRÉS TERMICO PUNTUAL","DOSIMETRIAS","Bacterias Aerobias","O3(8-24H)","CAMPOS O  RADIACION ELECTROMAGNETICA"],"branches":[{"name":"POSORJA","records":17,"frequency":"Histórico 2026","active":true},{"name":"RECUENTO S. AUREUS","records":1,"frequency":"Histórico 2026","active":true},{"name":"SALMONELLAS","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PRODUCTOSDEB119","name":"PRODUCTOS DE BALSA PRODUBAL S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["PM10-2.5-24H","RAPD","CO2 (PUNTUAL)*"],"branches":[]},{"id":"PROMOHARBORS120","name":"PROMOHARBOR S.A.S","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"PROMOSUBASAS121","name":"PROMOSUBA S.A.S.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"SAMBORONDON","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PROMOTORABAT122","name":"PROMOTORA BATAN ESTE PROBAESTE S.A.S.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"SAMBORONDON","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PRONAUPLIOSA123","name":"PRONAUPLIO S A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RLPD"],"branches":[{"name":"PUNTA CARNERO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PROYECTOSYCO124","name":"PROYECTOS Y CONSTRUCCIONES - PROCON S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","PM10-2.5-24H"],"branches":[]},{"id":"PSIDMA125","name":"PSI-DMA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["CO,CO2,NO2,SO2,O3"],"branches":[{"name":"EDIFICIO MULTICOMERCIO-GUAYAQUIL-INCENDIO-NO SE COBRA","records":1,"frequency":"Histórico 2026","active":true},{"name":"EL CAFE-GUAYAQUIL-INCENDIO-NO SE COBRA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"PUNTOVERDESA126","name":"PUNTO VERDE S.A. PUNVERSA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["LUXPD","RLPD"],"branches":[]},{"id":"QUIMICAMPDEL127","name":"QUIMICAMP DEL ECUADOR","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["DOSIMETRIAS"],"branches":[]},{"id":"RECICLAJESYP128","name":"RECICLAJES Y PROCESOS ECOLOGICOS S.A. RECOLOGICO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"REYBOSQUESCL129","name":"REYBOSQUES C.L.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":9,"monitorings":["DOSIMETRIAS","EVALUACION ERGONOMICA*","PARTICULAS SUSPENDIDAS TOTALES","LUXPD","RL - POR TAREAS"],"branches":[{"name":"STO. DOMINGO","records":6,"frequency":"Histórico 2026","active":true},{"name":"SANTO DOMINGO","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"REYLACTEOSCL130","name":"REYLACTEOS C.L","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF"],"branches":[{"name":"SANTO DOMINGO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"SAMIYAMEALS131","name":"SAMIYAMEALS","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"VIA A LA COSTA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"SERDIDYVSASE132","name":"SERDIDYV S.A SERVICIOS DE DIALISIS, DISTRIBUCIÓN Y VENTA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"CENTRO KENNEDY","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"SERUVISA133","name":"SERUVI S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RLPD","RAPD"],"branches":[{"name":"CITY MALL","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"SERVICIOSINT134","name":"SERVICIOS INTERNACIONALES TURISTICOS SITUR SA","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"GALAPAGOS","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"SIKAECUATORI135","name":"SIKA ECUATORIANA S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":13,"monitorings":["RAPD","PM10-2.5-24H","DOSIMETRIAS","RAPN","RLPD"],"branches":[{"name":"DURÁN","records":5,"frequency":"Histórico 2026","active":true},{"name":"PLANTA MACHACHI","records":4,"frequency":"Histórico 2026","active":true},{"name":"MACHACHI","records":4,"frequency":"Histórico 2026","active":true}]},{"id":"SOCIEDADNACI136","name":"SOCIEDAD NACIONAL DE GALAPAGOS C.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)","PM10-2.5-24H","RAPD","RAPN"],"branches":[{"name":"SUR","records":3,"frequency":"Histórico 2026","active":true},{"name":"SONGA 1","records":1,"frequency":"Histórico 2026","active":true},{"name":"SONGA 2","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"SOFTYSECUADO137","name":"SOFTYS ECUADOR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RAPN","PM10-2.5-24H"],"branches":[]},{"id":"SZKDELECUADO138","name":"SZK DEL ECUADOR S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"AGENCIA CARLOS JULIO","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"TALUMSA139","name":"TALUM S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"SAMBORONDON","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"TECNICENTROH140","name":"TECNICENTRO HUGO","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[]},{"id":"TECNOAMBIENT141","name":"TECNOAMBIENTE","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":15,"monitorings":["COVS"],"branches":[{"name":"EDS. DOMINGO COMIN-REMEDIACIÓN-FT","records":8,"frequency":"Histórico 2026","active":true},{"name":"EDS. DOMINGO COMIN","records":2,"frequency":"Histórico 2026","active":true},{"name":"EDS. BELLAVISTA-FT","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. EL TERMINAL-FT","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. GUAYAQUIL-FT","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. ARUALSA-PROYECTO FT","records":1,"frequency":"Histórico 2026","active":true},{"name":"EDS. ARUALSA-PROYECTO FT-PM","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"TECNOAMBOENT142","name":"TECNOAMBOENTE-MEXICHEM","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["COVS"],"branches":[{"name":"PLANTA DURÁN - FT","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"TECNOLOGIAYS143","name":"TECNOLOGIA YSERVICIOSTECSERV S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["RLPD"],"branches":[{"name":"PUNTA CARNERO","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"TECNOQUALITY144","name":"TECNOQUALITY","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":2,"monitorings":["COVS"],"branches":[{"name":"STA ELENA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"TELCONETSA145","name":"TELCONET S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":34,"monitorings":["RAPD","PM10-2.5 PUNTUAL","GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF","PM10-2.5-24H","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"CTO TELCOCITY","records":4,"frequency":"Histórico 2026","active":true},{"name":"OTAVALO","records":3,"frequency":"Histórico 2026","active":true},{"name":"GOSSEAL","records":3,"frequency":"Histórico 2026","active":true},{"name":"DATA CENTER","records":3,"frequency":"Histórico 2026","active":true},{"name":"ARMENIA","records":3,"frequency":"Histórico 2026","active":true},{"name":"SUR 2-ATAHUALPA","records":3,"frequency":"Histórico 2026","active":true},{"name":"NODO BODEGA DE KENNEDY","records":3,"frequency":"Histórico 2026","active":true},{"name":"DATA CENTER GYE","records":3,"frequency":"Histórico 2026","active":true},{"name":"TELEPUERTO, GYE","records":3,"frequency":"Histórico 2026","active":true},{"name":"NODO AGREGADOR SUR, GYE","records":3,"frequency":"Histórico 2026","active":true},{"name":"CABLE ANDINO (GYE)","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"TERMOEKTERMO146","name":"TERMOEK TERMOENCOGIBLES Y EMPAQUES S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["PM10-2.5-24H","RLPD","ESTRES TERMICO","ILUMINACION"],"branches":[{"name":"KM 10,5 VIA A DAULE","records":4,"frequency":"Histórico 2026","active":true}]},{"id":"THETESALIASP147","name":"THE TESALIA SPRINGS COMPANY S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":18,"monitorings":["ERGONOMIA POSTURAS FORZADAS","ERGONOMIA MANEJO DE CARGAS","RAPD","PM10-2.5-24H","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"AGENCIA MACHACHI","records":8,"frequency":"Histórico 2026","active":true},{"name":"PLANTA GUAYAQUIL","records":5,"frequency":"Histórico 2026","active":true},{"name":"PLANTA MILAGRO","records":3,"frequency":"Histórico 2026","active":true},{"name":"PLANTA MACHALA","records":2,"frequency":"Histórico 2026","active":true}]},{"id":"TURISMOAMONR148","name":"TURISMO AMONRA S.A","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":3,"monitorings":["RAPD","RLPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)"],"branches":[{"name":"GALAPAGOS","records":3,"frequency":"Histórico 2026","active":true}]},{"id":"UNILEVERANDI149","name":"UNILEVER ANDINA ECUADOR","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF"],"branches":[{"name":"PLANTA GUAYAQUIL","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"UNIVERSALSWE150","name":"UNIVERSAL SWEET INDUSTRIES S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":5,"monitorings":["RAPD","GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF","PARTICULAS SUSPENDIDAS TOTALES 8H","DOSIMETRIAS","LUXPD"],"branches":[]},{"id":"VERISSA151","name":"VERIS S.A.","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":1,"monitorings":["RAPD"],"branches":[{"name":"FRENTE A GIMNASIO TAURUS LAJOYA","records":1,"frequency":"Histórico 2026","active":true}]},{"id":"YANQAYINGENI152","name":"YANQAY INGENIERA AMBIENTAL","ruc":"","contact":"","phone":"","email":"","frequency":"Según programación","active":true,"records":4,"monitorings":["RAPD"],"branches":[{"name":"MILENIUM GARDENS","records":1,"frequency":"Histórico 2026","active":true},{"name":"INCOPES","records":1,"frequency":"Histórico 2026","active":true},{"name":"GRAND BAY-MANTA","records":1,"frequency":"Histórico 2026","active":true},{"name":"MILENIUM TOWER","records":1,"frequency":"Histórico 2026","active":true}]}];
 const DEFAULT_MONITORING=[{"name":"Amoniaco","identification":"RG","measurementType":"Laboral","active":true},{"name":"Bacterias Aerobias","identification":"RG","measurementType":"Laboral","active":true},{"name":"CAMPOS O RADIACIÓN ELECTROMAGNÉTICA","identification":"RG","measurementType":"Laboral","active":true},{"name":"Clorobenceno","identification":"RG","measurementType":"Laboral","active":true},{"name":"CO,NO2,SO2(8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO,NO2,SO2(8-24H) + O3(8 HORAS)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO,NO2,SO2(1-8-24H)+ PM10-2.5 24H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO(8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO, CO2","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO,CO2,NO2,SO2,O3","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO,CO2,NO2,SO2,O3,PM10, PM2.5","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO2(8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CONFORT O ESTRÉS TÉRMICO PUNTUAL","identification":"RG","measurementType":"Laboral","active":true},{"name":"COVS","identification":"RG","measurementType":"Ambiental","active":true},{"name":"ERGONOMÍA","identification":"RG","measurementType":"Laboral","active":true},{"name":"ERGONOMÍA MANEJO DE CARGAS","identification":"RG","measurementType":"Laboral","active":true},{"name":"ERGONOMÍA MOVIMIENTOS REPETITIVOS","identification":"RG","measurementType":"Laboral","active":true},{"name":"ERGONOMÍA POSTURAS FORZADAS","identification":"RG","measurementType":"Laboral","active":true},{"name":"ERGONOMÍA PANTALLAS DE VISUALIZACIÓN DE DATOS","identification":"RG","measurementType":"Laboral","active":true},{"name":"GASES EN FUENTES FIJAS(CO,NOX,SO2)-GCFF","identification":"RG","measurementType":"Ambiental","active":true},{"name":"GCFM + NÚMERO DE HUMO","identification":"RG","measurementType":"Ambiental","active":true},{"name":"GCFM (TASA DE EMISIÓN)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"GCMPFF - GASES EN FUENTES FIJAS + PARTÍCULAS TOTALES","identification":"RG","measurementType":"Ambiental","active":true},{"name":"H2S","identification":"RG","measurementType":"Laboral","active":true},{"name":"HCL","identification":"RG","measurementType":"Laboral","active":true},{"name":"HUMOS METÁLICOS: CROMO HEXAVALENTE","identification":"RG","measurementType":"Ambiental","active":true},{"name":"HUMOS METÁLICOS: HIERRO Y NÍQUEL","identification":"RG","measurementType":"Ambiental","active":true},{"name":"LUXP - POR ÁREAS","identification":"RG","measurementType":"Laboral","active":true},{"name":"LUXPD","identification":"RG","measurementType":"Laboral","active":true},{"name":"LUXPN","identification":"RG","measurementType":"Laboral","active":true},{"name":"METABISULFITO DE SODIO","identification":"RG","measurementType":"Laboral","active":true},{"name":"METIL ACETONA","identification":"RG","measurementType":"Laboral","active":true},{"name":"PARTÍCULAS TOTALES EN FUENTES FIJAS-MPFF","identification":"RG","measurementType":"Ambiental","active":true},{"name":"NAOH","identification":"RG","measurementType":"Laboral","active":true},{"name":"O3(8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"OPACIDAD","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-24H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5 PUNTUAL","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5-10H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5-24H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5-2H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5-4H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM10-2.5-8H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PM2.5-24H","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PARTÍCULAS RESPIRABLES -8H","identification":"RG","measurementType":"Laboral","active":true},{"name":"PARTÍCULAS SEDIMENTABLES-30 DÍAS","identification":"RG","measurementType":"Ambiental","active":true},{"name":"PARTÍCULAS SUSPENDIDAS TOTALES 8H","identification":"RG","measurementType":"Laboral","active":true},{"name":"RAPD","identification":"RR","measurementType":"Ambiental","active":true},{"name":"RAPN","identification":"RR","measurementType":"Ambiental","active":true},{"name":"RFM - RUIDO EN FUENTES MÓVILES","identification":"RR","measurementType":"Ambiental","active":true},{"name":"RL - POR TAREAS","identification":"RR","measurementType":"Laboral","active":true},{"name":"RUIDO LABORAL PUNTUAL EN BANDAS DE OCTAVAS","identification":"RR","measurementType":"Laboral","active":true},{"name":"RLPD","identification":"RR","measurementType":"Laboral","active":true},{"name":"RLPN","identification":"RR","measurementType":"Laboral","active":true},{"name":"SCREENING DE ESTRÉS TÉRMICO","identification":"RG","measurementType":"Laboral","active":true},{"name":"SO2(8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"VBR - CE (VIBRACIÓN CUERPO ENTERO)","identification":"RG","measurementType":"Laboral","active":true},{"name":"VBR - MB (VIBRACIÓN MANO BRAZO)","identification":"RG","measurementType":"Laboral","active":true},{"name":"VBR - MB/CE","identification":"RG","measurementType":"Laboral","active":true},{"name":"FORMALDEHÍDO CHO (8-24H)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"DOSIMETRÍAS","identification":"RR","measurementType":"Laboral","active":true},{"name":"GASES EN FUENTES FIJAS(CO,NOX,SO2)","identification":"RG","measurementType":"Ambiental","active":true},{"name":"NH3","identification":"RG","measurementType":"Ambiental","active":true},{"name":"CO","identification":"RG","measurementType":"Ambiental","active":true}];
-const DEFAULT_SIMPLE={"measurementTypes":["Ambiental","Laboral"],"workGroups":["RM","FT","RM-FT","JLV","JN","LM","HM","JLV-FT","FT-LM","FT-VV","AFH","JLV-RM"],"identifications":["RR","RG"],"otStatuses":["OT por programar","OT programada","OT entregada"],"responsibles":[]};
+const DEFAULT_SIMPLE={"measurementTypes":["Ambiental","Laboral"],"workGroups":["RM","FT","RM-FT","JLV","JN","LM","HM","JLV-FT","FT-LM","FT-VV","AFH","JLV-RM"],"identifications":["RR","RG"],"otStatuses":["OT por programar","OT programada","OT entregada"],"responsibles":[],"sequenceSettings":{"activeYear":2026}};
 const K={samples:'erp_gases_v1_samples',history:'erp_gases_v1_history',clients:'erp_gases_v101_clients',monitoring:'erp_gases_v101_monitoring',simple:'erp_gases_v101_simple',backupLatest:'erp_gases_v181_backup_latest',backupPrevious:'erp_gases_v181_backup_previous',backupMeta:'erp_gases_v181_backup_meta',auditUser:'erp_gases_v190_audit_user'};
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 function safeJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw===null?fallback:JSON.parse(raw)}catch(err){console.error('Dato local dañado:',key,err);return fallback}}
@@ -601,10 +677,11 @@ function auditSnapshot(obj){if(!obj||typeof obj!=='object')return null;const out
 function auditChanges(before,after){if(!before||!after)return [];const keys=new Set([...Object.keys(before),...Object.keys(after)]),changes=[];keys.forEach(k=>{if(AUDIT_IGNORED_FIELDS.has(k))return;const a=before[k],b=after[k];if(JSON.stringify(a)!==JSON.stringify(b))changes.push({field:k,before:a??'',after:b??''})});return changes}
 function setAuditUser(name){auditCurrentUser=(name||'Usuario local').trim()||'Usuario local';localStorage.setItem(K.auditUser,auditCurrentUser);if($('auditCurrentUser'))$('auditCurrentUser').value=auditCurrentUser;if($('auditUserStatus'))$('auditUserStatus').textContent='Activo: '+auditCurrentUser}
 
-const selectedReports=new Set(),selectedAuthorization=new Set(),selectedPortal=new Set();
+const selectedRegistered=new Set(),selectedLaboratory=new Set(),selectedReports=new Set(),selectedAuthorization=new Set(),selectedPortal=new Set();
 let clients=safeJSON(K.clients,null)||DEFAULT_CLIENTS;
 let monitorings=safeJSON(K.monitoring,null)||DEFAULT_MONITORING;
 let simple=safeJSON(K.simple,null)||DEFAULT_SIMPLE;
+if(!simple.sequenceSettings||!Number.isInteger(Number(simple.sequenceSettings.activeYear)))simple.sequenceSettings={...(simple.sequenceSettings||{}),activeYear:2026};
 function uid(){return crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function permanentUUID(){return crypto.randomUUID?.()||`uuid-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`}
 function normalizeCode(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
@@ -663,12 +740,82 @@ function refreshCatalogOptions(keep={}){
  syncIdentification();
 }
 function refreshBranches(value=''){const name=$('company').value.trim();const c=clients.find(x=>x.name.toLowerCase()===name.toLowerCase());$('branchList').innerHTML=(c?.branches||[]).filter(x=>x.active!==false).map(x=>`<option value="${esc(x.name)}"></option>`).join('');$('branch').value=value||''}
-function syncIdentification(){const t=$('measurementType').value;$('identification').value=t==='Laboral'?'RG':'RR';updateCode()}
-function autoMonitoring(){const m=monitorings.find(x=>x.name===$('monitoring').value);if(m){$('measurementType').value=m.measurementType;syncIdentification()}}
+function syncIdentification(){
+ const m=monitorings.find(x=>x.name===$('monitoring').value);
+ if(m){
+  $('measurementType').value=m.measurementType||'';
+  $('identification').value=m.identification||'RR';
+ }
+ updateCode();
+}
+function autoMonitoring(){
+ const m=monitorings.find(x=>x.name===$('monitoring').value);
+ if(m){
+  $('measurementType').value=m.measurementType||'';
+  $('identification').value=m.identification||'RR';
+ }else{
+  $('measurementType').value='';
+  $('identification').value='RR';
+ }
+ $('sequence').value='';
+ updateCode();
+}
 function ensureClientAndBranch(){const company=$('company').value.trim(),branch=$('branch').value.trim();if(!company)return null;let c=clients.find(x=>x.name.toLowerCase()===company.toLowerCase());if(!c){c={id:uid(),name:company,ruc:'',contact:'',phone:'',email:'',frequency:'Según programación',active:true,records:0,monitorings:[],branches:[]};clients.unshift(c);hist('CATÁLOGO CLIENTES',`Cliente agregado automáticamente: ${company}`)}if(branch&&!c.branches.some(b=>b.name.toLowerCase()===branch.toLowerCase())){c.branches.push({name:branch,frequency:'',active:true,records:0});hist('CATÁLOGO CLIENTES',`Sucursal agregada automáticamente a ${c.name}: ${branch}`)}return c}
-function nextSeq(t,exclude=''){return samples.filter(x=>x.identification===t&&x.id!==exclude).reduce((a,x)=>Math.max(a,+x.sequence||0),0)+1}
-function updateCode(){const t=$('identification').value;if(!t){$('assignedCode').value='';return}let n=+$('sequence').value||nextSeq(t,$('editId').value);$('sequence').value=n;$('assignedCode').value=`${t} 26${String(n).padStart(4,'0')}`}
-function resetForm(){$('sampleForm').reset();$('editId').value='';$('points').value=1;$('workDate').value=new Date().toISOString().slice(0,10);$('receivedDate').value='';refreshCatalogOptions();$('otFollow').value=simple.otStatuses[0]||'';syncIdentification();updateCode()}
+function configuredSequenceYear(){
+ const y=Number(simple?.sequenceSettings?.activeYear);
+ return Number.isInteger(y)&&y>=2000&&y<=2099?y:new Date().getFullYear();
+}
+function sampleSequenceYear(x){
+ const direct=Number(x?.sequenceYear);if(Number.isInteger(direct)&&direct>=2000&&direct<=2099)return direct;
+ const code=normalizeCode(x?.assignedCode);const m=code.match(/^(RR|RG)(\d{2})/);
+ return m?2000+Number(m[2]):Number(String(x?.workDate||'').slice(0,4))||configuredSequenceYear();
+}
+function sampleSequenceNumber(x){
+ const direct=Number(x?.sequence);if(Number.isInteger(direct)&&direct>0)return direct;
+ const code=normalizeCode(x?.assignedCode);const m=code.match(/^(RR|RG)\d{2}(\d{1,4})$/);return m?Number(m[2]):0;
+}
+function nextSeq(t,year,exclude=''){
+ return samples.filter(x=>x.identification===t&&sampleSequenceYear(x)===Number(year)&&x.id!==exclude&&x.uuid!==exclude).reduce((a,x)=>Math.max(a,sampleSequenceNumber(x)),0)+1;
+}
+function updateCode(){
+ const t=$('identification').value;if(!t){$('assignedCode').value='';return}
+ let year=Number($('sequenceYear')?.value)||configuredSequenceYear();
+ if(year<2000||year>2099)year=configuredSequenceYear();
+ if($('sequenceYear'))$('sequenceYear').value=year;
+ let n=+$('sequence').value||nextSeq(t,year,$('editId').value);
+ if(n>9999){$('assignedCode').value='LÍMITE DE SECUENCIA';return}
+ $('sequence').value=n;$('assignedCode').value=`${t}${String(year).slice(-2)}${String(n).padStart(4,'0')}`;
+}
+function renderSequenceYearSettings(){
+ const year=configuredSequenceYear();
+ if($('activeSequenceYear'))$('activeSequenceYear').value=year;
+ if($('activeYearBadge'))$('activeYearBadge').textContent=`AÑO VIGENTE ${year}`;
+ if($('nextRRPreview'))$('nextRRPreview').value=`RR${String(year).slice(-2)}${String(nextSeq('RR',year)).padStart(4,'0')}`;
+ if($('nextRGPreview'))$('nextRGPreview').value=`RG${String(year).slice(-2)}${String(nextSeq('RG',year)).padStart(4,'0')}`;
+}
+function saveActiveSequenceYear(){
+ const year=Number($('activeSequenceYear')?.value);
+ if(!Number.isInteger(year)||year<2000||year>2099){alert('Ingrese un año válido entre 2000 y 2099.');return}
+ simple.sequenceSettings={...(simple.sequenceSettings||{}),activeYear:year};
+ if(!$('editId')?.value&&$('sequenceYear')){$('sequenceYear').value=year;$('sequence').value='';updateCode()}
+ hist('CONFIGURACIÓN DE SECUENCIA',`Año vigente establecido en ${year}`,null,{module:'CONFIGURACIÓN'});
+ persist('AÑO VIGENTE ACTUALIZADO');renderSequenceYearSettings();
+ alert(`Año vigente guardado: ${year}. Las nuevas OT usarán este año por defecto.`);
+}
+function resetForm(){
+ $('sampleForm').reset();
+ $('editId').value='';
+ $('points').value=1;
+ $('workDate').value=new Date().toISOString().slice(0,10);
+ $('receivedDate').value='';
+ refreshCatalogOptions();
+ $('otFollow').value=simple.otStatuses[0]||'';
+ $('measurementType').value='';
+ $('identification').value='RR';
+ $('sequenceYear').value=configuredSequenceYear();
+ $('sequence').value='';
+ $('assignedCode').value='';
+}
 $('sampleForm').onsubmit=e=>{
  e.preventDefault();
  const form=$('sampleForm');
@@ -713,6 +860,7 @@ UUID protegido: ${conflict.uuid}`);
    workDate:$('workDate').value,
    receivedDate:old?.receivedDate||'',
    identification:$('identification').value,
+   sequenceYear:Number($('sequenceYear').value),
    sequence:+$('sequence').value,
    assignedCode,
    otFollow:$('otFollow').value,
@@ -787,7 +935,69 @@ function fmt(d){
   return isNaN(nd)?s:nd.toLocaleDateString('es-EC');
  }catch(_e){return String(d)}
 }
-function renderRegistered(){const q=$('searchRegistered').value.toLowerCase(),a=samples.filter(x=>x.status==='REGISTRADA'&&!x.receivedDate&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));stats('statsRegistered',a);$('registeredTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Tipo</th><th>Puntos</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>`<tr><td><b>${esc(x.assignedCode)}</b><div class="muted">${esc(x.otFollow)}</div></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}</td><td>${esc(x.measurementType)}</td><td>${x.points}</td><td>${fmt(x.workDate)}</td><td><button class="btn blue small" onclick="editSample('${x.id}')">Editar</button> <button class="btn primary small" onclick="sendLab('${x.id}')">Enviar a Laboratorio</button> <button class="btn danger small" onclick="removeSample('${x.id}')">Eliminar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No hay registros.</div>'}
+function updateRegisteredSelection(){
+ const n=selectedRegistered.size;
+ const el=$('selectedRegisteredCount');
+ if(el)el.textContent=`${n} seleccionada${n===1?'':'s'}`;
+}
+function toggleRegisteredSelection(id,checked){
+ id=String(id);
+ checked?selectedRegistered.add(id):selectedRegistered.delete(id);
+ updateRegisteredSelection();
+}
+function registeredFiltered(){
+ const q=$('searchRegistered').value.toLowerCase();
+ return samples.filter(x=>x.status==='REGISTRADA'&&!x.receivedDate&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
+}
+
+function sortTextValue(v){
+ return String(v??'').trim().toLocaleLowerCase('es');
+}
+function sortDateValue(v){
+ if(!v)return Number.POSITIVE_INFINITY;
+ const t=new Date(String(v).length===10?String(v)+'T00:00:00':v).getTime();
+ return Number.isFinite(t)?t:Number.POSITIVE_INFINITY;
+}
+function codeSortValue(v){
+ const s=String(v??'').toUpperCase().replace(/\s+/g,'');
+ const m=s.match(/^([A-Z]+)(\d+)$/);
+ return m?{prefix:m[1],number:Number(m[2])}:{prefix:s,number:0};
+}
+function compareRows(a,b,field,direction='asc',secondaryField=''){
+ let result=0;
+ if(field==='code'){
+  const av=codeSortValue(a.assignedCode),bv=codeSortValue(b.assignedCode);
+  result=av.prefix.localeCompare(bv.prefix,'es') || (av.number-bv.number);
+ }else if(['date','workDate','receivedDate','maxReportDate','invoiceDate'].includes(field)){
+  const key=field==='date'?'workDate':field;
+  result=sortDateValue(a[key])-sortDateValue(b[key]);
+ }else if(field==='client'){
+  result=sortTextValue(a.company).localeCompare(sortTextValue(b.company),'es',{numeric:true});
+ }else if(field==='monitoring'){
+  result=sortTextValue(a.monitoring).localeCompare(sortTextValue(b.monitoring),'es',{numeric:true});
+ }else if(field==='points'){
+  result=Number(a.points||0)-Number(b.points||0);
+ }else if(field==='subtotal'){
+  result=Number(a.subtotal||a.billingSubtotal||0)-Number(b.subtotal||b.billingSubtotal||0);
+ }
+ if(result===0 && secondaryField && secondaryField!==field){
+  return compareRows(a,b,secondaryField,'asc','');
+ }
+ return direction==='desc'?-result:result;
+}
+function sortedRows(rows,prefix,defaultField,defaultDirection,secondaryField=''){
+ const field=$(prefix+'SortField')?.value||defaultField;
+ const direction=$(prefix+'SortDirection')?.value||defaultDirection;
+ return [...rows].sort((a,b)=>compareRows(a,b,field,direction,secondaryField));
+}
+
+function renderRegistered(){
+ const a=sortedRows(registeredFiltered(),'registered','code','desc');
+ stats('statsRegistered',a);
+ $('registeredTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Tipo</th><th>Puntos</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>`<tr><td><input class="rowcheck registered-select" data-registered-id="${x.id}" type="checkbox" ${selectedRegistered.has(String(x.id))?'checked':''} onchange="toggleRegisteredSelection(this.dataset.registeredId,this.checked)"></td><td><b>${esc(x.assignedCode)}</b><div class="muted">${esc(x.otFollow)}</div></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}</td><td>${esc(x.measurementType)}</td><td>${x.points}</td><td>${fmt(x.workDate)}</td><td><button class="btn blue small" onclick="editSample('${x.id}')">Editar</button> <button class="btn primary small" onclick="sendLab('${x.id}')">Enviar a Laboratorio</button> <button class="btn danger small" onclick="removeSample('${x.id}')">Eliminar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No hay registros.</div>';
+ [...selectedRegistered].forEach(id=>{if(!a.some(x=>String(x.id)===String(id)))selectedRegistered.delete(String(id))});
+ updateRegisteredSelection();
+}
 function businessAdd(dateStr,days){let d=new Date(dateStr+'T12:00:00');let n=0;while(n<Number(days||0)){d.setDate(d.getDate()+1);if(d.getDay()!==0&&d.getDay()!==6)n++}return d.toISOString().slice(0,10)}
 function daysLate(maxDate){if(!maxDate)return 0;const t=new Date();t.setHours(0,0,0,0);const m=new Date(maxDate+'T00:00:00');return Math.max(0,Math.floor((t-m)/86400000))}
 function labStatusLabel(x){
@@ -896,14 +1106,29 @@ function exportLabConsolidated(){
  downloadLabExcel(rows,'Control general de informes · Filtros visibles','ERP_GASES_CONTROL_GENERAL_'+new Date().toISOString().slice(0,10));
 }
 
-function renderLab(){
+function updateLaboratorySelection(){
+ const n=selectedLaboratory.size;
+ const el=$('selectedLaboratoryCount');
+ if(el)el.textContent=`${n} seleccionada${n===1?'':'s'}`;
+}
+function toggleLaboratorySelection(id,checked){
+ id=String(id);
+ checked?selectedLaboratory.add(id):selectedLaboratory.delete(id);
+ updateLaboratorySelection();
+}
+function laboratoryFiltered(){
  const q=$('searchLab').value.toLowerCase();
- const a=samples.filter(x=>x.status==='LABORATORIO'&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
+ return samples.filter(x=>x.status==='LABORATORIO'&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
+}
+function renderLab(){
+ const a=sortedRows(laboratoryFiltered(),'laboratory','receivedDate','asc');
  const entered=samples.filter(x=>x.labEntryDate||['INFORME_PENDIENTE','AUTORIZACION','PORTAL_PENDIENTE','PORTAL_ENVIADO'].includes(x.status));
  const pending=entered.filter(x=>x.status==='INFORME_PENDIENTE').length;
  const overdue=entered.filter(x=>x.status==='INFORME_PENDIENTE'&&daysLate(x.maxReportDate)>0).length;
  $('statsLab').innerHTML=`<div class="stat"><b>${a.length}</b><span>POR INGRESAR AL LABORATORIO</span></div><div class="stat"><b>${pending}</b><span>INFORMES PENDIENTES</span></div><div class="stat"><b>${overdue}</b><span>VENCIDOS</span></div><div class="stat"><b>${entered.length}</b><span>INGRESADOS / CONTROL FINAL</span></div>`;
- $('labTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Tipo</th><th>Puntos</th><th>Recepción</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>`<tr><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}</td><td>${esc(x.measurementType)}</td><td>${x.points}</td><td>${fmt(x.receivedDate)}</td><td>${badge(x.status)}</td><td><button class="btn blue small" onclick="editSample('${x.id}')">Revisar datos</button> <button class="btn primary small" onclick="openLabEntry('${x.id}')">Ingresar oficialmente</button> <button class="btn warning small" onclick="returnRegistered('${x.id}')">Devolver</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No hay OT pendientes de ingreso oficial al Laboratorio.</div>';
+ $('labTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Tipo</th><th>Puntos</th><th>Recepción</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>`<tr><td><input class="rowcheck laboratory-select" data-laboratory-id="${x.id}" type="checkbox" ${selectedLaboratory.has(String(x.id))?'checked':''} onchange="toggleLaboratorySelection(this.dataset.laboratoryId,this.checked)"></td><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}</td><td>${esc(x.measurementType)}</td><td>${x.points}</td><td>${fmt(x.receivedDate)}</td><td>${badge(x.status)}</td><td><button class="btn blue small" onclick="editSample('${x.id}')">Revisar datos</button> <button class="btn primary small" onclick="openLabEntry('${x.id}')">Ingresar oficialmente</button> <button class="btn warning small" onclick="returnRegistered('${x.id}')">Devolver</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No hay OT pendientes de ingreso oficial al Laboratorio.</div>';
+ [...selectedLaboratory].forEach(id=>{if(!a.some(x=>String(x.id)===String(id)))selectedLaboratory.delete(String(id))});
+ updateLaboratorySelection();
  const g=labGeneralFilteredRows({consolidated:true});
  const filteredPending=g.filter(x=>x.status==='INFORME_PENDIENTE').length;
  const filteredOverdue=g.filter(x=>x.status==='INFORME_PENDIENTE'&&daysLate(x.maxReportDate)>0).length;
@@ -919,7 +1144,7 @@ function renderLab(){
 function reportMatches(x,q){return !q||[x.company,x.branch,x.monitoring,x.assignedCode,x.labAnalyst].join(' ').toLowerCase().includes(q)}
 function updateReportSelection(){const n=selectedReports.size;$('selectedReportCount').textContent=`${n} seleccionado${n===1?'':'s'}`}
 function toggleReportSelection(id,checked){id=String(id);checked?selectedReports.add(id):selectedReports.delete(id);updateReportSelection()}
-function renderReports(){const q=$('searchReports').value.toLowerCase(),a=samples.filter(x=>x.status==='INFORME_PENDIENTE'&&reportMatches(x,q));const overdue=a.filter(x=>daysLate(x.maxReportDate)>0).length;const ontime=a.length-overdue;$('statsReports').innerHTML=`<div class="stat"><b>${a.length}</b><span>INFORMES PENDIENTES</span></div><div class="stat"><b>${ontime}</b><span>EN PLAZO</span></div><div class="stat"><b>${overdue}</b><span>VENCIDOS</span></div><div class="stat"><b>${a.reduce((n,x)=>n+Number(x.points||0),0)}</b><span>PUNTOS EN PROCESO</span></div>`;$('reportsTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Analista</th><th>Recepción</th><th>Fecha máxima</th><th>Plazo</th><th>Entrega real</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>{const late=daysLate(x.maxReportDate);return `<tr><td><input class="rowcheck report-select" data-report-id="${x.id}" type="checkbox" ${selectedReports.has(String(x.id))||selectedReports.has(x.id)?'checked':''} onchange="toggleReportSelection(String(this.dataset.reportId),this.checked)"></td><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}<div class="muted">${x.points} punto(s)</div></td><td>${esc(x.labAnalyst||'Sin asignar')}</td><td>${fmt(x.receivedDate)}</td><td><b>${fmt(x.maxReportDate)}</b></td><td>${late?`<span class="badge off">VENCIDO · ${late} día(s)</span>`:'<span class="badge on">EN PLAZO</span>'}</td><td><input id="realDate_${x.id}" type="date" value="${x.realDeliveryDate||''}"></td><td><button class="btn primary small" onclick="saveRealDelivery('${x.id}')">💾 Guardar</button> <button class="btn blue small" onclick="openLabEntry('${x.id}',true)">Editar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">No hay informes pendientes de entrega real.</div>';[...selectedReports].forEach(id=>{if(!a.some(x=>x.id===id))selectedReports.delete(id)});updateReportSelection()}
+function renderReports(){const q=$('searchReports').value.toLowerCase(),a=sortedRows(samples.filter(x=>x.status==='INFORME_PENDIENTE'&&reportMatches(x,q)),'reports','maxReportDate','asc');const overdue=a.filter(x=>daysLate(x.maxReportDate)>0).length;const ontime=a.length-overdue;$('statsReports').innerHTML=`<div class="stat"><b>${a.length}</b><span>INFORMES PENDIENTES</span></div><div class="stat"><b>${ontime}</b><span>EN PLAZO</span></div><div class="stat"><b>${overdue}</b><span>VENCIDOS</span></div><div class="stat"><b>${a.reduce((n,x)=>n+Number(x.points||0),0)}</b><span>PUNTOS EN PROCESO</span></div>`;$('reportsTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Analista</th><th>Recepción</th><th>Fecha máxima</th><th>Plazo</th><th>Entrega real</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>{const late=daysLate(x.maxReportDate);return `<tr><td><input class="rowcheck report-select" data-report-id="${x.id}" type="checkbox" ${selectedReports.has(String(x.id))||selectedReports.has(x.id)?'checked':''} onchange="toggleReportSelection(String(this.dataset.reportId),this.checked)"></td><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}<div class="muted">${x.points} punto(s)</div></td><td>${esc(x.labAnalyst||'Sin asignar')}</td><td>${fmt(x.receivedDate)}</td><td><b>${fmt(x.maxReportDate)}</b></td><td>${late?`<span class="badge off">VENCIDO · ${late} día(s)</span>`:'<span class="badge on">EN PLAZO</span>'}</td><td><input id="realDate_${x.id}" type="date" value="${x.realDeliveryDate||''}"></td><td><button class="btn primary small" onclick="saveRealDelivery('${x.id}')">💾 Guardar</button> <button class="btn blue small" onclick="openLabEntry('${x.id}',true)">Editar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">No hay informes pendientes de entrega real.</div>';[...selectedReports].forEach(id=>{if(!a.some(x=>x.id===id))selectedReports.delete(id)});updateReportSelection()}
 window.toggleReportSelection=toggleReportSelection;
 window.saveRealDelivery=id=>{const x=samples.find(s=>s.id===id),d=$(`realDate_${id}`)?.value;if(!x||!d)return alert('Seleccione la fecha real de entrega.');x.realDeliveryDate=d;x.status='AUTORIZACION';x.updatedAt=new Date().toISOString();hist('FECHA REAL DE ENTREGA REGISTRADA',`INFORME PENDIENTE → AUTORIZACIÓN · Entrega real: ${fmt(d)}`,x);selectedReports.delete(id);persist();renderAll();showView('autorizacion')}
 function saveSelectedRealDates(){
@@ -1144,7 +1369,7 @@ function exportBillingConsolidated(){
 }
 
 function renderBilling(){
- if(!$('billingTable'))return;const a=billingFiltered();billingTotals(a);$('billingVisibleCount').textContent=`${a.length} visibles`;
+ if(!$('billingTable'))return;const a=sortedRows(billingFiltered(),'billing','invoiceDate','asc','code');billingTotals(a);$('billingVisibleCount').textContent=`${a.length} visibles`;
  $('billingTable').innerHTML=a.length?`<div class="table-wrap"><table style="min-width:1850px"><thead><tr><th>Código</th><th>Cliente</th><th>Sucursal</th><th>Monitoreo</th><th>Puntos</th><th>Recepción</th><th>Cotización</th><th>Factura</th><th>Fecha factura</th><th>Subtotal</th><th>Estado</th><th>Observación</th><th>Acción</th></tr></thead><tbody>${a.map(x=>`<tr class="billing-row" id="billrow_${x.id}"><td class="billing-tech"><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b></td><td>${esc(x.branch||'—')}</td><td>${esc(x.monitoring)}</td><td>${Number(x.points||0)}</td><td>${fmt(x.receivedDate)}</td><td><input class="billing-input" id="quotation_${x.id}" value="${esc(x.quotation||'')}" placeholder="COT-0000" oninput="markBillingDirty('${x.id}')"></td><td><input class="billing-input" id="invoice_${x.id}" value="${esc(x.invoice||'')}" placeholder="Factura" oninput="markBillingDirty('${x.id}')"></td><td><input class="billing-input" id="invoiceDate_${x.id}" type="date" value="${esc(x.invoiceDate||'')}" oninput="markBillingDirty('${x.id}')"></td><td><input class="billing-input billing-money" id="subtotal_${x.id}" type="number" min="0" step="0.01" value="${Number(x.subtotal||0)}" oninput="markBillingDirty('${x.id}')"></td><td><select class="billing-input billing-status" id="billingStatus_${x.id}" onchange="markBillingDirty('${x.id}')"><option value="PENDIENTE" ${(x.billingStatus||'PENDIENTE')==='PENDIENTE'?'selected':''}>PENDIENTE</option><option value="FACTURADO" ${x.billingStatus==='FACTURADO'?'selected':''}>FACTURADO</option><option value="FACTURA PARCIAL" ${x.billingStatus==='FACTURA PARCIAL'?'selected':''}>FACTURA PARCIAL</option><option value="EN ESPERA" ${x.billingStatus==='EN ESPERA'?'selected':''}>EN ESPERA</option><option value="NO FACTURAR" ${x.billingStatus==='NO FACTURAR'?'selected':''}>NO FACTURAR</option></select></td><td><textarea class="billing-input billing-observation" id="billingObservation_${x.id}" placeholder="Ej.: Pendiente OC, facturar junto con otra OT, proyecto FT, retención comercial..." oninput="markBillingDirty('${x.id}')">${esc(x.billingObservation||'')}</textarea></td><td><button class="btn primary small" onclick="saveBilling('${x.id}')">💾 Guardar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No existen OT ingresadas al Laboratorio para los filtros seleccionados.</div>';
 }
 window.markBillingDirty=id=>{$(`billrow_${id}`)?.classList.add('dirty')}
@@ -1401,13 +1626,98 @@ function validateLocalBase(){
 }
 
 function renderAll(){validateLocalBase();
- const jobs=[renderRegistered,renderLab,renderReports,renderAuthorization,renderPortal,renderBilling,renderTrace,renderHistory,renderClients,renderMonitoring,renderSimple,updateFlowMenuCounts];
+ const jobs=[renderRegistered,renderLab,renderReports,renderAuthorization,renderPortal,renderBilling,renderTrace,renderHistory,renderClients,renderMonitoring,renderSimple,renderSequenceYearSettings,updateFlowMenuCounts];
  jobs.forEach(fn=>{try{fn()}catch(err){console.error('ERP GASES · Render aislado falló:',fn?.name,err)}});
  renderUUIDHealth();
 }
-window.editSample=id=>{const x=samples.find(s=>s.id===id);if(!x)return;refreshCatalogOptions({company:x.company,branch:x.branch,monitoring:x.monitoring,measurementType:x.measurementType,identification:x.identification,otFollow:x.otFollow,createdBy:x.createdBy});Object.entries(x).forEach(([k,v])=>{if($(k))$(k).value=v??''});$('editId').value=id;showView('registro')}
+window.editSample=id=>{
+ const x=samples.find(s=>s.id===id);
+ if(!x)return;
+ refreshCatalogOptions({company:x.company,branch:x.branch,monitoring:x.monitoring,measurementType:x.measurementType,identification:x.identification,otFollow:x.otFollow,createdBy:x.createdBy});
+ Object.entries(x).forEach(([k,v])=>{if($(k))$(k).value=v??''});
+ $('editId').value=id;
+ const m=monitorings.find(z=>z.name===x.monitoring);
+ if(m){
+  $('measurementType').value=m.measurementType||x.measurementType||'';
+  $('identification').value=m.identification||x.identification||'RR';
+ }else{
+  $('measurementType').value=x.measurementType||'';
+  $('identification').value=x.identification||'RR';
+ }
+ $('sequenceYear').value=sampleSequenceYear(x);
+ $('sequence').value=sampleSequenceNumber(x)||'';
+ updateCode();
+ showView('registro');
+}
+function sendSelectedRegisteredToLab(){
+ const btn=$('sendSelectedToLab');
+ const checked=[...document.querySelectorAll('#registeredTable .registered-select:checked')].map(el=>String(el.dataset.registeredId||''));
+ checked.forEach(id=>selectedRegistered.add(id));
+ const ids=[...new Set([...selectedRegistered].map(String))];
+ const reception=$('batchReceptionDate').value;
+ if(!ids.length)return alert('Seleccione al menos una muestra.');
+ if(!reception)return alert('Seleccione la fecha de recepción de las OT.');
+ const valid=ids.map(id=>samples.find(s=>String(s.id)===id&&s.status==='REGISTRADA'&&!s.receivedDate)).filter(Boolean);
+ if(!valid.length)return alert('Las OT seleccionadas ya no están disponibles en Muestras registradas.');
+ if(!confirm(`Se enviarán ${valid.length} OT a Laboratorio con fecha de recepción ${fmt(reception)}. ¿Continuar?`))return;
+ if(btn){btn.disabled=true;btn.textContent='Enviando…'}
+ try{
+  valid.forEach(x=>{
+   x.receivedDate=reception;
+   x.status='LABORATORIO';
+   x.updatedAt=new Date().toISOString();
+   hist('ENVIADA A LABORATORIO',`Proceso múltiple · Recepción OT: ${fmt(reception)} · REGISTRADA → LABORATORIO`,x);
+  });
+  selectedRegistered.clear();
+  persist('ENVÍO MÚLTIPLE A LABORATORIO');
+  renderAll();
+  showView('laboratorio');
+  try{window.erpToast?.(`${valid.length} OT enviadas correctamente a Laboratorio.`)}catch{}
+ }catch(err){
+  console.error('Error en envío múltiple a Laboratorio',err);
+  alert('No se pudo completar el envío múltiple: '+(err?.message||err));
+ }finally{
+  if(btn){btn.disabled=false;btn.textContent='🏥 Enviar seleccionadas a Laboratorio'}
+ }
+}
 window.sendLab=id=>{const x=samples.find(s=>s.id===id);if(!x)return;const today=new Date().toISOString().slice(0,10);const suggested=x.receivedDate||x.workDate||today;$('receptionSampleId').value=id;$('receptionCode').textContent=`OT ${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;$('receptionDateInput').value=suggested;$('receptionHint').textContent=x.workDate?`Fecha de inicio del trabajo: ${fmt(x.workDate)}. Puede cambiarla desde el calendario.`:'No existe fecha de inicio registrada; se sugiere la fecha actual.';$('receptionModal').classList.add('show');setTimeout(()=>$('receptionDateInput').showPicker?.(),100)}
 $('receptionForm').onsubmit=e=>{e.preventDefault();const id=$('receptionSampleId').value,x=samples.find(s=>s.id===id);if(!x)return;const reception=$('receptionDateInput').value;if(!reception){alert('Seleccione la fecha de recepción de la OT.');return}x.receivedDate=reception;x.status='LABORATORIO';x.updatedAt=new Date().toISOString();hist('ENVIADA A LABORATORIO',`Recepción OT: ${fmt(reception)} · REGISTRADA → LABORATORIO`,x);persist();$('receptionModal').classList.remove('show');renderAll();showView('laboratorio')}
+function officialEntrySelected(){
+ const btn=$('officialEntrySelected');
+ const checked=[...document.querySelectorAll('#labTable .laboratory-select:checked')].map(el=>String(el.dataset.laboratoryId||''));
+ checked.forEach(id=>selectedLaboratory.add(id));
+ const ids=[...new Set([...selectedLaboratory].map(String))];
+ if(!ids.length)return alert('Seleccione al menos una OT.');
+ const valid=ids.map(id=>samples.find(s=>String(s.id)===id&&s.status==='LABORATORIO')).filter(Boolean);
+ if(!valid.length)return alert('Las OT seleccionadas ya no están disponibles para ingreso oficial.');
+ if(!confirm(`Se ingresarán oficialmente ${valid.length} OT al Laboratorio y pasarán a Informes pendientes. ¿Continuar?`))return;
+ if(btn){btn.disabled=true;btn.textContent='Procesando…'}
+ try{
+  valid.forEach(x=>{
+   const analyst=x.labAnalyst||x.createdBy||(simple.responsibles||[])[0]||'Sin asignar';
+   x.receivedDate=x.receivedDate||new Date().toISOString().slice(0,10);
+   x.labAnalyst=analyst;
+   x.slaDays=Number(x.slaDays||8);
+   x.maxReportDate=x.maxReportDate||businessAdd(x.receivedDate,x.slaDays);
+   x.points=Number(x.points||1);
+   x.labNotes=x.labNotes||'';
+   x.status='INFORME_PENDIENTE';
+   x.labEntryDate=x.labEntryDate||new Date().toISOString();
+   x.updatedAt=new Date().toISOString();
+   hist('INGRESO OFICIAL AL LABORATORIO',`Proceso múltiple · LABORATORIO → INFORME PENDIENTE · Analista: ${x.labAnalyst||'Sin asignar'} · Fecha máxima: ${fmt(x.maxReportDate)}`,x);
+  });
+  selectedLaboratory.clear();
+  persist('INGRESO OFICIAL MÚLTIPLE AL LABORATORIO');
+  renderAll();
+  showView('informes');
+  try{window.erpToast?.(`${valid.length} OT ingresadas oficialmente y enviadas a Informes pendientes.`)}catch{}
+ }catch(err){
+  console.error('Error en ingreso oficial múltiple',err);
+  alert('No se pudo completar el ingreso oficial múltiple: '+(err?.message||err));
+ }finally{
+  if(btn){btn.disabled=false;btn.textContent='✅ Ingresar oficialmente seleccionadas'}
+ }
+}
 window.openLabEntry=(id,editing=false)=>{const x=samples.find(s=>s.id===id);if(!x)return;$('labEntrySampleId').value=id;$('labEntryCode').textContent=`${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;fillSelect('labAnalyst',simple.responsibles||[],x.labAnalyst||x.createdBy||'');$('labReceivedDate').value=x.receivedDate||new Date().toISOString().slice(0,10);$('labSla').value=x.slaDays||8;$('labMaxDate').value=x.maxReportDate||businessAdd($('labReceivedDate').value,$('labSla').value);$('labCompany').value=x.company||'';$('labBranch').value=x.branch||'';$('labMonitoring').value=x.monitoring||'';$('labMeasurementType').value=x.measurementType||'';$('labPoints').value=x.points||1;$('labNotes').value=x.labNotes||'';$('labEntryModal').classList.add('show')}
 function recalcLabMax(){$('labMaxDate').value=businessAdd($('labReceivedDate').value,$('labSla').value)}
 $('labReceivedDate').onchange=recalcLabMax;$('labSla').oninput=recalcLabMax;
@@ -1420,10 +1730,36 @@ window.editClient=id=>openClient(clients.find(c=>c.id===id));
 window.toggleClient=id=>{const c=clients.find(x=>x.id===id);c.active=!c.active;hist('CATÁLOGO CLIENTES',`${c.name}: ${c.active?'activado':'desactivado'}`);persist();refreshCatalogOptions();renderAll()}
 window.deleteClient=id=>{const c=clients.find(x=>x.id===id);if(confirm(`¿Eliminar ${c.name}?`)){clients=clients.filter(x=>x.id!==id);hist('CATÁLOGO CLIENTES',`Cliente eliminado: ${c.name}`);persist();refreshCatalogOptions();renderAll()}}
 $('clientForm').onsubmit=e=>{e.preventDefault();const id=$('clientId').value||uid(),old=clients.find(c=>c.id===id);const branches=[...document.querySelectorAll('.branch-row')].map(r=>({name:r.querySelector('.br-name').value.trim(),frequency:r.querySelector('.br-frequency').value.trim(),active:r.querySelector('.br-active').value==='1',records:0})).filter(b=>b.name);const c={id,name:$('clientName').value.trim(),ruc:$('clientRuc').value.trim(),frequency:$('clientFrequency').value.trim(),contact:$('clientContact').value.trim(),phone:$('clientPhone').value.trim(),email:$('clientEmail').value.trim(),notes:$('clientNotes').value.trim(),active:old?.active??true,records:old?.records||0,monitorings:old?.monitorings||[],branches};if(old)clients=clients.map(x=>x.id===id?c:x);else clients.unshift(c);hist('CATÁLOGO CLIENTES',`${old?'Cliente corregido':'Cliente agregado'}: ${c.name}`);persist();refreshCatalogOptions({company:c.name});$('clientModal').classList.remove('show');renderAll()}
-function openMonitoring(i=''){const m=i===''?null:monitorings[i];$('monitorIndex').value=i;$('monitorName').value=m?.name||'';fillSelect('monitorType',simple.measurementTypes,m?.measurementType||'');$('monitorIdentification').value=(m?.measurementType||$('monitorType').value)==='Laboral'?'RG':'RR';$('monitorModal').classList.add('show')}
+function openMonitoring(i=''){
+ const m=i===''?null:monitorings[i];
+ $('monitorIndex').value=i;
+ $('monitorName').value=m?.name||'';
+ fillSelect('monitorType',simple.measurementTypes,m?.measurementType||'');
+ $('monitorIdentification').value=m?.identification||'RR';
+ $('monitorModal').classList.add('show');
+}
 window.editMonitoring=i=>openMonitoring(i);window.toggleMonitoring=i=>{monitorings[i].active=!monitorings[i].active;hist('CATÁLOGO MONITOREOS',`${monitorings[i].name}: ${monitorings[i].active?'activado':'desactivado'}`);persist();refreshCatalogOptions();renderAll()}
 window.deleteMonitoring=i=>{if(confirm(`¿Eliminar ${monitorings[i].name}?`)){hist('CATÁLOGO MONITOREOS',`Eliminado: ${monitorings[i].name}`);monitorings.splice(i,1);persist();refreshCatalogOptions();renderAll()}}
-$('monitorForm').onsubmit=e=>{e.preventDefault();const i=$('monitorIndex').value,m={name:$('monitorName').value.trim(),measurementType:$('monitorType').value,identification:$('monitorType').value==='Laboral'?'RG':'RR',active:i===''?true:monitorings[i].active};if(i==='')monitorings.unshift(m);else monitorings[i]=m;hist('CATÁLOGO MONITOREOS',`${i===''?'Agregado':'Corregido'}: ${m.name}`);persist();refreshCatalogOptions({monitoring:m.name});$('monitorModal').classList.remove('show');renderAll()}
+$('monitorForm').onsubmit=e=>{
+ e.preventDefault();
+ const i=$('monitorIndex').value;
+ const m={
+  name:$('monitorName').value.trim(),
+  measurementType:$('monitorType').value,
+  identification:$('monitorIdentification').value,
+  active:i===''?true:monitorings[i].active
+ };
+ if(!m.name||!m.measurementType||!['RR','RG'].includes(m.identification)){
+  alert('Complete nombre, tipo de medición e identificación RR/RG.');
+  return;
+ }
+ if(i==='')monitorings.unshift(m);else monitorings[i]=m;
+ hist('CATÁLOGO MONITOREOS',`${i===''?'Agregado':'Corregido'}: ${m.name} · ${m.measurementType} · ${m.identification}`);
+ persist();
+ refreshCatalogOptions({monitoring:m.name});
+ $('monitorModal').classList.remove('show');
+ renderAll();
+}
 window.renameSimple=(k,i)=>{const n=prompt('Corregir opción:',simple[k][i]);if(n&&n.trim()){const old=simple[k][i];simple[k][i]=n.trim();hist('CATÁLOGO GENERAL',`${old} → ${n.trim()}`);persist();refreshCatalogOptions();renderAll()}}
 window.removeSimple=(k,i)=>{if(confirm(`¿Eliminar ${simple[k][i]}?`)){hist('CATÁLOGO GENERAL',`Eliminado: ${simple[k][i]}`);simple[k].splice(i,1);persist();refreshCatalogOptions();renderAll()}}
 const viewModule={registro:'mediciones',registradas:'mediciones',laboratorio:'laboratorio',informes:'laboratorio',autorizacion:'laboratorio',portal:'laboratorio',facturacion:'facturacion',trazabilidad:'trazabilidad',catalogos:'configuracion',historial:'configuracion'};
@@ -1455,10 +1791,25 @@ document.querySelectorAll('.module-tabs button').forEach(b=>b.onclick=()=>{const
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('show'));
 document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{showView('catalogos');const k=b.dataset.open;if(k==='clients')document.querySelector('[data-cat="clients"]').click();else if(k==='monitoring'){document.querySelector('[data-cat="monitoring"]').click();openMonitoring()}else{document.querySelector('[data-cat="simple"]').click();$('simpleType').value=k;renderSimple()}});
 document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-cat]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.catalog-pane').forEach(x=>x.classList.remove('active'));$('cat-'+b.dataset.cat).classList.add('active')});
-$('newClient').onclick=()=>openClient();$('newMonitoring').onclick=()=>openMonitoring();$('addBranchRow').onclick=()=>addBranchEditor();$('company').oninput=()=>refreshBranches();$('company').onchange=()=>refreshBranches();$('monitoring').onchange=autoMonitoring;$('measurementType').onchange=syncIdentification;$('sequence').oninput=updateCode;$('monitorType').onchange=()=>{$('monitorIdentification').value=$('monitorType').value==='Laboral'?'RG':'RR'};$('clearForm').onclick=resetForm;
+$('newClient').onclick=()=>openClient();$('newMonitoring').onclick=()=>openMonitoring();$('addBranchRow').onclick=()=>addBranchEditor();$('company').oninput=()=>refreshBranches();$('company').onchange=()=>refreshBranches();$('monitoring').onchange=autoMonitoring;$('sequence').oninput=updateCode;$('sequenceYear').oninput=()=>{$('sequence').value='';updateCode()};$('clearForm').onclick=resetForm;$('saveActiveSequenceYear').onclick=saveActiveSequenceYear;
 $('quickBranch').onclick=()=>{const company=$('company').value.trim();if(!company)return alert('Seleccione o escriba primero un cliente.');let c=clients.find(x=>x.name.toLowerCase()===company.toLowerCase());if(!c){c={id:uid(),name:company,ruc:'',contact:'',phone:'',email:'',frequency:'Según programación',active:true,records:0,monitorings:[],branches:[]};clients.unshift(c)}const n=prompt('Nombre de la nueva sucursal:',$('branch').value.trim());if(n&&n.trim()){if(!c.branches.some(b=>b.name.toLowerCase()===n.trim().toLowerCase()))c.branches.push({name:n.trim(),frequency:'',active:true,records:0});hist('CATÁLOGO CLIENTES',`Sucursal agregada a ${c.name}: ${n.trim()}`);persist();refreshCatalogOptions({company:c.name,branch:n.trim()});renderClients()}}
 $('addSimple').onclick=()=>{const k=$('simpleType').value,v=$('simpleValue').value.trim();if(v&&!simple[k].includes(v)){simple[k].push(v);$('simpleValue').value='';hist('CATÁLOGO GENERAL',`Agregado: ${v}`);persist();refreshCatalogOptions();renderSimple()}}
-$('simpleType').onchange=renderSimple;$('clientSearch').oninput=renderClients;$('monitoringSearch').oninput=renderMonitoring;$('searchRegistered').oninput=renderRegistered;$('searchLab').oninput=renderLab;$('searchLabGeneral').oninput=renderLab;
+$('simpleType').onchange=renderSimple;$('clientSearch').oninput=renderClients;$('monitoringSearch').oninput=renderMonitoring;$('searchRegistered').oninput=renderRegistered;
+$('selectVisibleRegistered').onclick=()=>{registeredFiltered().forEach(x=>selectedRegistered.add(String(x.id)));renderRegistered()};
+$('clearRegisteredSelection').onclick=()=>{selectedRegistered.clear();renderRegistered()};
+$('sendSelectedToLab').onclick=sendSelectedRegisteredToLab;
+if(!$('batchReceptionDate').value)$('batchReceptionDate').value=new Date().toISOString().slice(0,10);
+
+['registeredSortField','registeredSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderRegistered});
+['laboratorySortField','laboratorySortDirection'].forEach(id=>{if($(id))$(id).onchange=renderLab});
+['reportsSortField','reportsSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderReports});
+['billingSortField','billingSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderBilling});
+
+$('searchLab').oninput=renderLab;
+$('selectVisibleLaboratory').onclick=()=>{laboratoryFiltered().forEach(x=>selectedLaboratory.add(String(x.id)));renderLab()};
+$('clearLaboratorySelection').onclick=()=>{selectedLaboratory.clear();renderLab()};
+$('officialEntrySelected').onclick=officialEntrySelected;
+$('searchLabGeneral').oninput=renderLab;
 if($('applyLabDateFilters'))$('applyLabDateFilters').onclick=renderLab;
 if($('clearLabDateFilters'))$('clearLabDateFilters').onclick=()=>{
  ['labDeliveryFrom','labDeliveryTo','labAuthorizationFrom','labAuthorizationTo'].forEach(id=>{if($(id))$(id).value=''});
@@ -1832,8 +2183,37 @@ renderAll();renderBackupCenter();setMessage(`<b>Recuperación completada:</b> ${
  function users(){try{return JSON.parse(localStorage.getItem(USERS_KEY)||'[]')}catch{return []}}
  function saveUsers(v){localStorage.setItem(USERS_KEY,JSON.stringify(v))}
  async function ensureDefault(){let u=users();if(!u.length){u=[{id:uuid(),name:'Administrador',username:'administrador',role:'ADMINISTRADOR',pinHash:await hashPin('2026'),active:true,mustChangePin:true,createdAt:new Date().toISOString()}];saveUsers(u)}}
- function session(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null')}catch{return null}}
- function saveSession(s){currentSession=s;if(s)sessionStorage.setItem(SESSION_KEY,JSON.stringify(s));else sessionStorage.removeItem(SESSION_KEY)}
+ function clearInvalidSession(){
+  currentSession=null;
+  try{sessionStorage.removeItem(SESSION_KEY)}catch{}
+  try{
+   const legacy=localStorage.getItem(SESSION_KEY);
+   if(legacy===null||legacy===''||legacy==='undefined'||legacy==='null'||legacy==='{}'){
+    localStorage.removeItem(SESSION_KEY);
+   }
+  }catch{}
+ }
+ function session(){
+  try{
+   const raw=sessionStorage.getItem(SESSION_KEY);
+   if(!raw||raw==='undefined'||raw==='null'||raw==='{}')return null;
+   const s=JSON.parse(raw);
+   if(!s||typeof s!=='object')return null;
+   const required=[s.id,s.name,s.username,s.role];
+   if(required.some(v=>!v||String(v).trim()===''||String(v)==='undefined'||String(v)==='null'))return null;
+   if(!ROLE_ACCESS[s.role])return null;
+   const u=users().find(x=>x.id===s.id&&x.active!==false);
+   if(!u||u.role!==s.role||norm(u.username)!==norm(s.username))return null;
+   return {id:u.id,name:u.name,username:u.username,role:u.role,loginAt:s.loginAt||new Date().toISOString()};
+  }catch{
+   return null;
+  }
+ }
+ function saveSession(s){
+  currentSession=s;
+  if(s)sessionStorage.setItem(SESSION_KEY,JSON.stringify(s));
+  else clearInvalidSession();
+ }
  function access(){return ROLE_ACCESS[currentSession?.role]||ROLE_ACCESS.CONSULTA}
  function authLog(action,detail){try{window.hist?.(action,detail,null,{module:'SEGURIDAD'})}catch{}}
  function showLogin(msg=''){q('authOverlay')?.classList.add('show');q('authError').textContent=msg;q('authError').classList.toggle('show',!!msg);setTimeout(()=>q('loginUser')?.focus(),50)}
@@ -1887,7 +2267,23 @@ renderAll();renderBackupCenter();setMessage(`<b>Recuperación completada:</b> ${
   }
  }
  function applyAllViewPermissions(){document.querySelectorAll('.view[id]').forEach(v=>applyViewPermission(v.id))}
- function applySession(){currentSession=session();if(!currentSession){showLogin();return}hideLogin();window.auditCurrentUser=currentSession.name;try{if(typeof setAuditUser==='function')setAuditUser(currentSession.name)}catch{};q('auditCurrentUser')?.setAttribute('readonly','readonly');if(q('saveAuditUser'))q('saveAuditUser').style.display='none';q('sessionUser').textContent=currentSession.name;q('sessionRole').textContent=ROLE_LABEL[currentSession.role]||currentSession.role;q('sessionChip').classList.add('show');q('currentRoleBadge').textContent=ROLE_LABEL[currentSession.role]||currentSession.role;
+ function applySession(){
+  currentSession=session();
+  if(!currentSession){
+   clearInvalidSession();
+   q('sessionChip')?.classList.remove('show');
+   q('readonlyBanner')?.classList.remove('show');
+   document.querySelectorAll('.view[id]').forEach(v=>{
+    v.classList.remove('permission-readonly');
+    v.querySelectorAll('[data-permission-locked="1"]').forEach(el=>{
+     el.disabled=false;
+     delete el.dataset.permissionLocked;
+    });
+   });
+   showLogin();
+   return;
+  }
+  hideLogin();window.auditCurrentUser=currentSession.name;try{if(typeof setAuditUser==='function')setAuditUser(currentSession.name)}catch{};q('auditCurrentUser')?.setAttribute('readonly','readonly');if(q('saveAuditUser'))q('saveAuditUser').style.display='none';q('sessionUser').textContent=currentSession.name;q('sessionRole').textContent=ROLE_LABEL[currentSession.role]||currentSession.role;q('sessionChip').classList.add('show');q('currentRoleBadge').textContent=ROLE_LABEL[currentSession.role]||currentSession.role;
   document.body.classList.remove('readonly-mode');q('readonlyBanner').classList.remove('show');
   document.querySelectorAll('.module-tabs button[data-module],.subnav button[data-view]').forEach(b=>b.classList.remove('permission-hidden','permission-denied'));
   document.querySelector('.firebase-panel')?.classList.remove('permission-hidden');q('userManagementArea')?.classList.remove('permission-hidden');
@@ -1903,7 +2299,16 @@ renderAll();renderBackupCenter();setMessage(`<b>Recuperación completada:</b> ${
   document.addEventListener('submit',e=>{if(currentSession&&!access().write&&!e.target.matches('#loginForm')){e.preventDefault();e.stopImmediatePropagation();deny('Modo consulta: no puede guardar cambios.')}},true)
  }
  async function createUser(){if(!access().users)return deny();const name=q('newUserName').value.trim(),role=q('newUserRole').value,pin=q('newUserPin').value.trim();if(!name)return alert('Ingrese el nombre del usuario.');if(!/^\d{4,12}$/.test(pin))return alert('El PIN debe tener entre 4 y 12 dígitos.');const list=users(),username=norm(name).replace(/[^a-z0-9áéíóúñ]+/gi,'.').replace(/^\.|\.$/g,'');if(list.some(x=>norm(x.username)===norm(username)||norm(x.name)===norm(name)))return alert('Ese usuario ya existe.');list.push({id:uuid(),name,username,role,pinHash:await hashPin(pin),active:true,mustChangePin:true,createdAt:new Date().toISOString(),createdBy:currentSession.name});saveUsers(list);authLog('USUARIO CREADO',`${name} · ${ROLE_LABEL[role]}`);q('newUserName').value='';q('newUserPin').value='';renderUsers();alert(`Usuario creado. Nombre de acceso: ${username}`)}
- async function init(){await ensureDefault();q('loginForm')?.addEventListener('submit',async e=>{e.preventDefault();try{await login(q('loginUser').value,q('loginPin').value)}catch(err){showLogin(err.message)}});q('logoutBtn')?.addEventListener('click',logout);q('createUserBtn')?.addEventListener('click',createUser);protectEvents();applySession()}
+ async function init(){
+  await ensureDefault();
+  const recovered=session();
+  if(!recovered)clearInvalidSession();
+  q('loginForm')?.addEventListener('submit',async e=>{e.preventDefault();try{await login(q('loginUser').value,q('loginPin').value)}catch(err){showLogin(err.message)}});
+  q('logoutBtn')?.addEventListener('click',logout);
+  q('createUserBtn')?.addEventListener('click',createUser);
+  protectEvents();
+  applySession();
+ }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 
  document.addEventListener('click',e=>{if(e.target.closest('.module-tabs button,.subnav button'))setTimeout(applyAllViewPermissions,30)},true);
@@ -2148,5 +2553,129 @@ renderAll();renderBackupCenter();setMessage(`<b>Recuperación completada:</b> ${
 })();
 </script>
 
+
+
+
+<script>
+/* ===== V2.0.5 · ALMACENAMIENTO PRIMARIO INDEXEDDB (SIN LÍMITE PEQUEÑO DE LOCALSTORAGE) ===== */
+(function(){
+  'use strict';
+  const DB_NAME='ERP_GASES_PRIMARY_DB';
+  const STORE='state';
+  const STATE_KEY='primary';
+  const META_KEY='erp_gases_v205_idb_meta';
+  const LARGE_KEYS=[K.samples,K.history,K.clients,K.monitoring,K.simple,K.backupLatest,K.backupPrevious,'erp_gases_v200_sync_envelope','erp_gases_v200_sync_packet','erp_gases_v200_last_packet','erp_gases_v201_cloud_cache'];
+  let saveChain=Promise.resolve();
+  let ready=false;
+
+  function openPrimaryDB(){
+    return new Promise((resolve,reject)=>{
+      const req=indexedDB.open(DB_NAME,1);
+      req.onupgradeneeded=()=>{
+        const db=req.result;
+        if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
+      };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error||new Error('No se pudo abrir IndexedDB'));
+    });
+  }
+  async function idbWrite(pack){
+    const db=await openPrimaryDB();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put(pack,STATE_KEY);
+      tx.oncomplete=()=>{db.close();resolve(true)};
+      tx.onerror=()=>{const e=tx.error;db.close();reject(e)};
+      tx.onabort=()=>{const e=tx.error;db.close();reject(e)};
+    });
+  }
+  async function idbRead(){
+    const db=await openPrimaryDB();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readonly');
+      const req=tx.objectStore(STORE).get(STATE_KEY);
+      req.onsuccess=()=>{const v=req.result||null;db.close();resolve(v)};
+      req.onerror=()=>{const e=req.error;db.close();reject(e)};
+    });
+  }
+  function currentPack(reason){
+    return {
+      version:'ERP GASES V2.0.5',schema:'indexeddb-primary-v1',reason:reason||'CAMBIO LOCAL',
+      createdAt:new Date().toISOString(),samples,history,clients,monitorings,simple
+    };
+  }
+  function setMeta(pack,status='OK'){
+    try{localStorage.setItem(META_KEY,JSON.stringify({at:pack.createdAt,count:pack.samples?.length||0,status,storage:'IndexedDB'}))}catch{}
+  }
+  function clearLargeLocalCopies(){
+    LARGE_KEYS.forEach(key=>{try{localStorage.removeItem(key)}catch{}});
+    try{cleanupObsoleteLocalStorage?.()}catch{}
+  }
+  function queueSave(reason){
+    const pack=currentPack(reason);
+    saveChain=saveChain.catch(()=>{}).then(()=>idbWrite(pack)).then(()=>{
+      setMeta(pack,'GUARDADO');
+      clearLargeLocalCopies();
+      try{window.dispatchEvent(new CustomEvent('erp-idb-saved',{detail:{at:pack.createdAt,reason}}))}catch{}
+      return true;
+    }).catch(err=>{
+      console.error('IndexedDB: no se pudo guardar la base principal',err);
+      try{window.erpToast?.('No se pudo confirmar el guardado interno. Mantenga esta ventana abierta y vuelva a intentar.','danger')}catch{}
+      return false;
+    });
+    return true;
+  }
+
+  /* Sustituye el guardado que llenaba localStorage. La información queda en memoria e IndexedDB. */
+  window.writePrimary=function(data){
+    const pack=data&&Array.isArray(data.samples)?data:currentPack('GUARDADO PRIMARIO');
+    saveChain=saveChain.catch(()=>{}).then(()=>idbWrite(pack)).then(()=>{setMeta(pack,'GUARDADO');clearLargeLocalCopies();return true});
+    return true;
+  };
+  window.persist=function(reason='CAMBIO LOCAL'){
+    queueSave(reason);
+    try{window.autoBackup?.('DESPUÉS DE '+reason)}catch{}
+    try{window.renderBackupCenter?.()}catch{}
+    try{window.dispatchEvent(new CustomEvent('erp-local-change',{detail:{reason,at:new Date().toISOString()}}))}catch{}
+    return true;
+  };
+
+  async function hydrate(){
+    try{
+      try{await navigator.storage?.persist?.()}catch{}
+      const stored=await idbRead();
+      if(stored&&validBackup(stored)){
+        samples=stored.samples;
+        history=stored.history;
+        clients=stored.clients;
+        monitorings=stored.monitorings;
+        simple=stored.simple;
+      }else{
+        await idbWrite(currentPack('MIGRACIÓN INICIAL A INDEXEDDB'));
+      }
+      clearLargeLocalCopies();
+      try{refreshCatalogOptions()}catch{}
+      try{renderAll()}catch(err){console.warn('Render después de IndexedDB:',err)}
+      ready=true;
+      try{window.erpToast?.('Almacenamiento estable activado. Ya no depende del límite pequeño del navegador.','ok')}catch{}
+    }catch(err){
+      console.error('No se pudo iniciar IndexedDB',err);
+      ready=true;
+      alert('No se pudo activar el almacenamiento estable del navegador. Evite usar navegación privada y revise que el sitio tenga permiso para guardar datos.');
+    }
+  }
+
+  /* El código antiguo intentaba crear una copia grande al cerrar. Se elimina inmediatamente. */
+  window.addEventListener('beforeunload',()=>{
+    try{queueSave('CIERRE O ACTUALIZACIÓN DEL NAVEGADOR')}catch{}
+    clearLargeLocalCopies();
+  });
+  window.addEventListener('pagehide',()=>{try{queueSave('SALIDA DE PÁGINA')}catch{};clearLargeLocalCopies()});
+  setInterval(clearLargeLocalCopies,30000);
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hydrate,{once:true});else hydrate();
+  window.erpStorageV205={saveNow:()=>queueSave('GUARDADO MANUAL'),isReady:()=>ready,read:idbRead};
+})();
+</script>
 
 </body></html>
