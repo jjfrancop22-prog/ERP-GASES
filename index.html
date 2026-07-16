@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERP GASES V2.0.9 — Edición protegida de datos base</title>
+<title>ERP GASES V2.0.5 — Almacenamiento IndexedDB Estable</title>
 <style>
 :root{--g:#12643b;--g2:#0b4328;--bg:#f4f8f5;--line:#d8e4dc;--ink:#1f2d25;--muted:#66766c;--blue:#175cd3;--red:#b42318;--amber:#9a6500;--shadow:0 10px 26px rgba(12,65,39,.09)}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -183,7 +183,7 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div id="readonlyBanner" class="readonly-banner">👁️ Modo consulta: puede revisar la información, pero no modificarla.</div>
 <div id="sessionChip" class="session-chip"><div><b id="sessionUser">—</b><br><span id="sessionRole">—</span></div><button id="logoutBtn" data-auth-safe="1">Cerrar sesión</button></div>
 
-<header><div><h1>ERP GASES — Registro y Seguimiento</h1><p>PSI · Laboratorio, informes y seguimiento general</p></div><div class="version">V2.0.9</div></header>
+<header><div><h1>ERP GASES — Registro y Seguimiento</h1><p>PSI · Laboratorio, informes y seguimiento general</p></div><div class="version">V2.0.8</div></header>
 <nav>
 <div class="module-tabs">
 <button class="active" data-module="mediciones">🌿 MEDICIONES AMBIENTALES <span class="module-count" id="moduleCountMediciones">0</span></button>
@@ -226,7 +226,7 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div class="f"><label class="req">N.º de puntos</label><input id="points" type="number" min="1" value="1" required></div>
 <div class="f w6"><label class="req">Cliente</label><div class="combo"><input id="company" list="companyList" autocomplete="off" placeholder="Seleccione o escriba un cliente" required><datalist id="companyList"></datalist><button type="button" class="iconbtn" data-open="clients">＋</button></div><small class="muted">Si escribe un cliente nuevo, se guardará automáticamente en el catálogo.</small></div>
 <div class="f w6"><label>Sucursal / lugar</label><div class="combo"><input id="branch" list="branchList" autocomplete="off" placeholder="Seleccione o escriba una sucursal"><datalist id="branchList"></datalist><button type="button" class="iconbtn" id="quickBranch">＋</button></div><small class="muted">Las sucursales cambian según el cliente. Una nueva se añadirá al catálogo al guardar.</small></div>
-<div class="f"><label class="req">Fecha inicio del trabajo</label><input id="workDate" type="date" required></div>
+<div class="f"><label>Fecha inicio del trabajo</label><input id="workDate" type="date"><small class="muted">Puede quedar vacía. Al colocarla, el seguimiento cambia automáticamente a “OT programada”.</small></div>
 <div class="f"><label>Fecha recepción OT</label><input id="receivedDate" type="date" readonly><small class="muted">Se completa al presionar “Enviar a Laboratorio”.</small></div>
 <div class="f"><label class="req">Identificación automática</label><select id="identification" required disabled><option value="RR">RR</option><option value="RG">RG</option></select><small class="muted">Se asigna desde el catálogo del monitoreo y queda bloqueada para esta OT.</small></div>
 <div class="f"><label class="req">Año de numeración</label><input id="sequenceYear" type="number" min="2000" max="2099" step="1" required><small class="muted">Toma por defecto el año vigente configurado. Puede cambiarlo para registrar una OT de un año anterior.</small></div>
@@ -247,6 +247,12 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
  <select id="registeredSortDirection" style="width:auto">
   <option value="asc">⬆ Ascendente</option>
   <option value="desc" selected>⬇ Descendente</option>
+ </select>
+ <label>Serie</label>
+ <select id="registeredSeriesFilter" style="width:auto">
+  <option value="ALL" selected>RR + RG</option>
+  <option value="RR">Solo RR</option>
+  <option value="RG">Solo RG</option>
  </select>
 </div>
 <div class="batchbar">
@@ -271,6 +277,12 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
  <select id="laboratorySortDirection" style="width:auto">
   <option value="asc" selected>⬆ Ascendente</option>
   <option value="desc">⬇ Descendente</option>
+ </select>
+ <label>Serie</label>
+ <select id="laboratorySeriesFilter" style="width:auto">
+  <option value="ALL" selected>RR + RG</option>
+  <option value="RR">Solo RR</option>
+  <option value="RG">Solo RG</option>
  </select>
 </div>
 <div class="batchbar">
@@ -322,6 +334,12 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
   <option value="asc" selected>⬆ Ascendente</option>
   <option value="desc">⬇ Descendente</option>
  </select>
+ <label>Serie</label>
+ <select id="reportsSeriesFilter" style="width:auto">
+  <option value="ALL" selected>RR + RG</option>
+  <option value="RR">Solo RR</option>
+  <option value="RG">Solo RG</option>
+ </select>
 </div>
 <div class="batchbar"><button class="btn secondary small" id="selectVisibleReports">☑ Seleccionar visibles</button><button class="btn secondary small" id="clearReportSelection">□ Limpiar selección</button><label>Fecha seleccionados</label><input id="batchRealDate" type="date"><button class="btn primary" id="saveSelectedRealDates">💾 Guardar seleccionados</button><span class="badge" id="selectedReportCount">0 seleccionados</span></div>
 <div class="notice"><b>Flujo:</b> INFORME PENDIENTE → registrar FECHA REAL DE ENTREGA → AUTORIZACIÓN. Los registros guardados desaparecen de esta bandeja y migran automáticamente al módulo Autorización.</div>
@@ -356,6 +374,12 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
  <select id="billingSortDirection" style="width:auto">
   <option value="asc" selected>⬆ Ascendente</option>
   <option value="desc">⬇ Descendente</option>
+ </select>
+ <label>Serie</label>
+ <select id="billingSeriesFilter" style="width:auto">
+  <option value="ALL" selected>RR + RG</option>
+  <option value="RR">Solo RR</option>
+  <option value="RG">Solo RG</option>
  </select>
 </div>
 <div class="batchbar">
@@ -565,7 +589,7 @@ label{display:block;font-weight:800;font-size:12px;margin:0 0 6px;color:#344c3d}
 <div class="f"><label>Tipo</label><input id="labMeasurementType" readonly></div>
 <div class="f"><label>N.º puntos</label><input id="labPoints" type="number" min="1"></div>
 <div class="f w12"><label>Observaciones de Laboratorio</label><textarea id="labNotes" placeholder="Novedades, correcciones o indicaciones para el informe"></textarea></div>
-</div><div class="actions"><button class="btn primary">INGRESAR OFICIALMENTE AL LABORATORIO</button><button type="button" class="btn warning" id="unlockLabBaseData">🔓 Editar datos base</button><button type="button" class="btn secondary" data-close="labEntryModal">Cancelar</button></div><div id="labBaseEditNotice" class="notice" style="display:none;margin-top:12px;background:#fff8e7;border-color:#efd99f;color:#725600"><b>Edición autorizada:</b> Cliente, sucursal, monitoreo, tipo y número de puntos están desbloqueados hasta guardar o cancelar. El código OT y la serie RR/RG permanecen protegidos.</div></form></div></div>
+</div><div class="actions"><button class="btn primary">INGRESAR OFICIALMENTE AL LABORATORIO</button><button type="button" class="btn secondary" data-close="labEntryModal">Cancelar</button></div></form></div></div>
 <div id="receptionModal" class="modal"><div class="modal-box" style="width:min(560px,100%)"><div class="modal-head"><div><h2>Enviar a Laboratorio</h2><div class="muted" id="receptionCode"></div></div><button class="close" data-close="receptionModal">×</button></div>
 <div id="receptionLockBanner" class="concurrent-lock-banner"></div><form id="receptionForm"><input type="hidden" id="receptionSampleId"><div class="notice">Seleccione la fecha de recepción de la OT. Se sugiere automáticamente la <b>fecha de inicio del trabajo</b>, porque normalmente es la más cercana.</div><label class="req">Fecha de recepción OT</label><input id="receptionDateInput" type="date" required><small class="muted" id="receptionHint"></small><div class="actions"><button class="btn primary">Confirmar y enviar a Laboratorio</button><button type="button" class="btn secondary" data-close="receptionModal">Cancelar</button></div></form></div></div>
 <div id="clientModal" class="modal"><div class="modal-box"><div class="modal-head"><div><h2 id="clientModalTitle">Cliente</h2><div class="muted">Información administrativa y sucursales relacionadas</div></div><button class="close" data-close="clientModal">×</button></div>
@@ -802,14 +826,24 @@ function saveActiveSequenceYear(){
  persist('AÑO VIGENTE ACTUALIZADO');renderSequenceYearSettings();
  alert(`Año vigente guardado: ${year}. Las nuevas OT usarán este año por defecto.`);
 }
+function syncOtFollowWithWorkDate(){
+ const date=String($('workDate')?.value||'').trim();
+ const follow=$('otFollow');
+ if(!follow)return;
+ const ensureOption=value=>{if(value&&![...follow.options].some(o=>o.value===value)){const op=document.createElement('option');op.value=value;op.textContent=value;follow.appendChild(op)}};
+ ensureOption('OT por programar');ensureOption('OT programada');
+ if(!date){follow.value='OT por programar';return}
+ if(!follow.value||follow.value==='OT por programar')follow.value='OT programada';
+}
 function resetForm(){
  $('sampleForm').reset();
  $('editId').value='';
  $('points').value=1;
- $('workDate').value=new Date().toISOString().slice(0,10);
+ $('workDate').value='';
  $('receivedDate').value='';
  refreshCatalogOptions();
- $('otFollow').value=simple.otStatuses[0]||'';
+ $('otFollow').value='OT por programar';
+ syncOtFollowWithWorkDate();
  $('measurementType').value='';
  $('identification').value='RR';
  $('sequenceYear').value=configuredSequenceYear();
@@ -821,7 +855,7 @@ $('sampleForm').onsubmit=e=>{
  const form=$('sampleForm');
  const required=[
   ['monitoring','Monitoreo'],['measurementType','Tipo de medición'],
-  ['company','Cliente'],['workDate','Fecha inicio del trabajo'],
+  ['company','Cliente'],
   ['identification','Identificación automática']
  ];
  const missing=required.filter(([id])=>!String($(id)?.value||'').trim());
@@ -850,6 +884,7 @@ Cliente: ${conflict.company||'Sin cliente'}
 UUID protegido: ${conflict.uuid}`);
    return false;
   }
+  syncOtFollowWithWorkDate();
   const x={
    id,uuid,
    monitoring:$('monitoring').value,
@@ -863,7 +898,7 @@ UUID protegido: ${conflict.uuid}`);
    sequenceYear:Number($('sequenceYear').value),
    sequence:+$('sequence').value,
    assignedCode,
-   otFollow:$('otFollow').value,
+   otFollow:$('workDate').value ? ($('otFollow').value||'OT programada') : 'OT por programar',
    createdBy:$('createdBy').value,
    observations:$('observations').value.trim(),
    status:old?.status||'REGISTRADA',
@@ -945,9 +980,24 @@ function toggleRegisteredSelection(id,checked){
  checked?selectedRegistered.add(id):selectedRegistered.delete(id);
  updateRegisteredSelection();
 }
+function recordSeriesValue(x){
+ const code=String(x?.assignedCode||'').trim().toUpperCase();
+ const identification=String(x?.identification||'').trim().toUpperCase();
+ return identification||((code.startsWith('RR')||code.startsWith('RG'))?code.slice(0,2):'');
+}
+function matchesSeriesFilter(x,filterId){
+ const series=$(filterId)?.value||'ALL';
+ return series==='ALL'||recordSeriesValue(x)===series;
+}
 function registeredFiltered(){
  const q=$('searchRegistered').value.toLowerCase();
- return samples.filter(x=>x.status==='REGISTRADA'&&!x.receivedDate&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
+ const series=$('registeredSeriesFilter')?.value||'ALL';
+ return samples.filter(x=>{
+  if(x.status!=='REGISTRADA'||x.receivedDate)return false;
+  const matchesSearch=!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q);
+  const matchesSeries=series==='ALL'||recordSeriesValue(x)===series;
+  return matchesSearch&&matchesSeries;
+ });
 }
 
 function sortTextValue(v){
@@ -1118,7 +1168,7 @@ function toggleLaboratorySelection(id,checked){
 }
 function laboratoryFiltered(){
  const q=$('searchLab').value.toLowerCase();
- return samples.filter(x=>x.status==='LABORATORIO'&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
+ return samples.filter(x=>x.status==='LABORATORIO'&&matchesSeriesFilter(x,'laboratorySeriesFilter')&&(!q||[x.company,x.branch,x.monitoring,x.assignedCode].join(' ').toLowerCase().includes(q)));
 }
 function renderLab(){
  const a=sortedRows(laboratoryFiltered(),'laboratory','receivedDate','asc');
@@ -1144,7 +1194,7 @@ function renderLab(){
 function reportMatches(x,q){return !q||[x.company,x.branch,x.monitoring,x.assignedCode,x.labAnalyst].join(' ').toLowerCase().includes(q)}
 function updateReportSelection(){const n=selectedReports.size;$('selectedReportCount').textContent=`${n} seleccionado${n===1?'':'s'}`}
 function toggleReportSelection(id,checked){id=String(id);checked?selectedReports.add(id):selectedReports.delete(id);updateReportSelection()}
-function renderReports(){const q=$('searchReports').value.toLowerCase(),a=sortedRows(samples.filter(x=>x.status==='INFORME_PENDIENTE'&&reportMatches(x,q)),'reports','maxReportDate','asc');const overdue=a.filter(x=>daysLate(x.maxReportDate)>0).length;const ontime=a.length-overdue;$('statsReports').innerHTML=`<div class="stat"><b>${a.length}</b><span>INFORMES PENDIENTES</span></div><div class="stat"><b>${ontime}</b><span>EN PLAZO</span></div><div class="stat"><b>${overdue}</b><span>VENCIDOS</span></div><div class="stat"><b>${a.reduce((n,x)=>n+Number(x.points||0),0)}</b><span>PUNTOS EN PROCESO</span></div>`;$('reportsTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Analista</th><th>Recepción</th><th>Fecha máxima</th><th>Plazo</th><th>Entrega real</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>{const late=daysLate(x.maxReportDate);return `<tr><td><input class="rowcheck report-select" data-report-id="${x.id}" type="checkbox" ${selectedReports.has(String(x.id))||selectedReports.has(x.id)?'checked':''} onchange="toggleReportSelection(String(this.dataset.reportId),this.checked)"></td><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}<div class="muted">${x.points} punto(s)</div></td><td>${esc(x.labAnalyst||'Sin asignar')}</td><td>${fmt(x.receivedDate)}</td><td><b>${fmt(x.maxReportDate)}</b></td><td>${late?`<span class="badge off">VENCIDO · ${late} día(s)</span>`:'<span class="badge on">EN PLAZO</span>'}</td><td><input id="realDate_${x.id}" type="date" value="${x.realDeliveryDate||''}"></td><td><button class="btn primary small" onclick="saveRealDelivery('${x.id}')">💾 Guardar</button> <button class="btn blue small" onclick="openLabEntry('${x.id}',true)">Editar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">No hay informes pendientes de entrega real.</div>';[...selectedReports].forEach(id=>{if(!a.some(x=>x.id===id))selectedReports.delete(id)});updateReportSelection()}
+function renderReports(){const q=$('searchReports').value.toLowerCase(),a=sortedRows(samples.filter(x=>x.status==='INFORME_PENDIENTE'&&matchesSeriesFilter(x,'reportsSeriesFilter')&&reportMatches(x,q)),'reports','maxReportDate','asc');const overdue=a.filter(x=>daysLate(x.maxReportDate)>0).length;const ontime=a.length-overdue;$('statsReports').innerHTML=`<div class="stat"><b>${a.length}</b><span>INFORMES PENDIENTES</span></div><div class="stat"><b>${ontime}</b><span>EN PLAZO</span></div><div class="stat"><b>${overdue}</b><span>VENCIDOS</span></div><div class="stat"><b>${a.reduce((n,x)=>n+Number(x.points||0),0)}</b><span>PUNTOS EN PROCESO</span></div>`;$('reportsTable').innerHTML=a.length?`<div class="table-wrap"><table><thead><tr><th>Sel.</th><th>Código</th><th>Cliente / Sucursal</th><th>Monitoreo</th><th>Analista</th><th>Recepción</th><th>Fecha máxima</th><th>Plazo</th><th>Entrega real</th><th>Acciones</th></tr></thead><tbody>${a.map(x=>{const late=daysLate(x.maxReportDate);return `<tr><td><input class="rowcheck report-select" data-report-id="${x.id}" type="checkbox" ${selectedReports.has(String(x.id))||selectedReports.has(x.id)?'checked':''} onchange="toggleReportSelection(String(this.dataset.reportId),this.checked)"></td><td><b>${esc(x.assignedCode)}</b></td><td><b>${esc(x.company)}</b><div class="muted">${esc(x.branch)}</div></td><td>${esc(x.monitoring)}<div class="muted">${x.points} punto(s)</div></td><td>${esc(x.labAnalyst||'Sin asignar')}</td><td>${fmt(x.receivedDate)}</td><td><b>${fmt(x.maxReportDate)}</b></td><td>${late?`<span class="badge off">VENCIDO · ${late} día(s)</span>`:'<span class="badge on">EN PLAZO</span>'}</td><td><input id="realDate_${x.id}" type="date" value="${x.realDeliveryDate||''}"></td><td><button class="btn primary small" onclick="saveRealDelivery('${x.id}')">💾 Guardar</button> <button class="btn blue small" onclick="openLabEntry('${x.id}',true)">Editar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">No hay informes pendientes de entrega real.</div>';[...selectedReports].forEach(id=>{if(!a.some(x=>x.id===id))selectedReports.delete(id)});updateReportSelection()}
 window.toggleReportSelection=toggleReportSelection;
 window.saveRealDelivery=id=>{const x=samples.find(s=>s.id===id),d=$(`realDate_${id}`)?.value;if(!x||!d)return alert('Seleccione la fecha real de entrega.');x.realDeliveryDate=d;x.status='AUTORIZACION';x.updatedAt=new Date().toISOString();hist('FECHA REAL DE ENTREGA REGISTRADA',`INFORME PENDIENTE → AUTORIZACIÓN · Entrega real: ${fmt(d)}`,x);selectedReports.delete(id);persist();renderAll();showView('autorizacion')}
 function saveSelectedRealDates(){
@@ -1297,7 +1347,7 @@ function billingFiltered(){
  const q=($('billingSearch')?.value||'').trim().toLowerCase(),month=$('billingMonth')?.value||'',status=$('billingStatusFilter')?.value||'',type=$('billingTypeFilter')?.value||'';
  return samples.filter(billingEligible).filter(x=>{
   const hay=[x.assignedCode,x.company,x.branch,x.monitoring,x.quotation,x.invoice,x.billingObservation].join(' ').toLowerCase();
-  return (!q||hay.includes(q))&&(!month||billingMonthValue(x)===month)&&(!status||(x.billingStatus||'PENDIENTE')===status)&&(!type||x.measurementType===type)
+  return matchesSeriesFilter(x,'billingSeriesFilter')&&(!q||hay.includes(q))&&(!month||billingMonthValue(x)===month)&&(!status||(x.billingStatus||'PENDIENTE')===status)&&(!type||x.measurementType===type)
  });
 }
 function billingTotals(list){
@@ -1647,6 +1697,7 @@ window.editSample=id=>{
  $('sequenceYear').value=sampleSequenceYear(x);
  $('sequence').value=sampleSequenceNumber(x)||'';
  updateCode();
+ syncOtFollowWithWorkDate();
  showView('registro');
 }
 function sendSelectedRegisteredToLab(){
@@ -1656,8 +1707,11 @@ function sendSelectedRegisteredToLab(){
  const ids=[...new Set([...selectedRegistered].map(String))];
  const reception=$('batchReceptionDate').value;
  if(!ids.length)return alert('Seleccione al menos una muestra.');
+ const selected=ids.map(id=>samples.find(s=>String(s.id)===id&&s.status==='REGISTRADA'&&!s.receivedDate)).filter(Boolean);
+ const withoutWorkDate=selected.filter(x=>!String(x.workDate||'').trim());
+ if(withoutWorkDate.length)return alert('POR FAVOR UBIQUE LA FECHA DE RECEPCIÓN antes de enviar a Laboratorio.\n\nOT pendientes: '+withoutWorkDate.map(x=>x.assignedCode||'Sin código').join(', '));
  if(!reception)return alert('Seleccione la fecha de recepción de las OT.');
- const valid=ids.map(id=>samples.find(s=>String(s.id)===id&&s.status==='REGISTRADA'&&!s.receivedDate)).filter(Boolean);
+ const valid=selected;
  if(!valid.length)return alert('Las OT seleccionadas ya no están disponibles en Muestras registradas.');
  if(!confirm(`Se enviarán ${valid.length} OT a Laboratorio con fecha de recepción ${fmt(reception)}. ¿Continuar?`))return;
  if(btn){btn.disabled=true;btn.textContent='Enviando…'}
@@ -1680,7 +1734,10 @@ function sendSelectedRegisteredToLab(){
   if(btn){btn.disabled=false;btn.textContent='🏥 Enviar seleccionadas a Laboratorio'}
  }
 }
-window.sendLab=id=>{const x=samples.find(s=>s.id===id);if(!x)return;const today=new Date().toISOString().slice(0,10);const suggested=x.receivedDate||x.workDate||today;$('receptionSampleId').value=id;$('receptionCode').textContent=`OT ${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;$('receptionDateInput').value=suggested;$('receptionHint').textContent=x.workDate?`Fecha de inicio del trabajo: ${fmt(x.workDate)}. Puede cambiarla desde el calendario.`:'No existe fecha de inicio registrada; se sugiere la fecha actual.';$('receptionModal').classList.add('show');setTimeout(()=>$('receptionDateInput').showPicker?.(),100)}
+window.sendLab=id=>{const x=samples.find(s=>s.id===id);if(!x)return;if(!String(x.workDate||'').trim()){alert('POR FAVOR UBIQUE LA FECHA DE RECEPCIÓN antes de enviar esta OT a Laboratorio.');return}const today=new Date().toISOString().slice(0,10);const suggested=x.receivedDate||x.workDate||today;$('receptionSampleId').value=id;$('receptionCode').textContent=`OT ${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;$('receptionDateInput').value=suggested;$('receptionHint').textContent=x.workDate?`Fecha de inicio del trabajo: ${fmt(x.workDate)}. Puede cambiarla desde el calendario.`:'No existe fecha de inicio registrada; se sugiere la fecha actual.';$('receptionModal').classList.add('show');setTimeout(()=>$('receptionDateInput').showPicker?.(),100)}
+$('workDate').addEventListener('change',syncOtFollowWithWorkDate);
+$('workDate').addEventListener('input',syncOtFollowWithWorkDate);
+
 $('receptionForm').onsubmit=e=>{e.preventDefault();const id=$('receptionSampleId').value,x=samples.find(s=>s.id===id);if(!x)return;const reception=$('receptionDateInput').value;if(!reception){alert('Seleccione la fecha de recepción de la OT.');return}x.receivedDate=reception;x.status='LABORATORIO';x.updatedAt=new Date().toISOString();hist('ENVIADA A LABORATORIO',`Recepción OT: ${fmt(reception)} · REGISTRADA → LABORATORIO`,x);persist();$('receptionModal').classList.remove('show');renderAll();showView('laboratorio')}
 function officialEntrySelected(){
  const btn=$('officialEntrySelected');
@@ -1718,20 +1775,10 @@ function officialEntrySelected(){
   if(btn){btn.disabled=false;btn.textContent='✅ Ingresar oficialmente seleccionadas'}
  }
 }
-let labBaseEditAuthorized=false;
-let labBaseOriginalData=null;
-function setLabBaseEditMode(enabled){
- labBaseEditAuthorized=!!enabled;
- ['labCompany','labBranch','labMonitoring','labMeasurementType'].forEach(id=>{const el=$(id);if(el)el.readOnly=!enabled});
- const points=$('labPoints');if(points)points.disabled=!enabled;
- const notice=$('labBaseEditNotice');if(notice)notice.style.display=enabled?'block':'none';
- const btn=$('unlockLabBaseData');if(btn){btn.textContent=enabled?'🔓 Datos base desbloqueados':'🔓 Editar datos base';btn.disabled=enabled}
-}
-window.openLabEntry=(id,editing=false)=>{const x=samples.find(s=>s.id===id);if(!x)return;setLabBaseEditMode(false);labBaseOriginalData={company:x.company||'',branch:x.branch||'',monitoring:x.monitoring||'',measurementType:x.measurementType||'',points:Number(x.points||1)};$('labEntrySampleId').value=id;$('labEntryCode').textContent=`${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;fillSelect('labAnalyst',simple.responsibles||[],x.labAnalyst||x.createdBy||'');$('labReceivedDate').value=x.receivedDate||new Date().toISOString().slice(0,10);$('labSla').value=x.slaDays||8;$('labMaxDate').value=x.maxReportDate||businessAdd($('labReceivedDate').value,$('labSla').value);$('labCompany').value=x.company||'';$('labBranch').value=x.branch||'';$('labMonitoring').value=x.monitoring||'';$('labMeasurementType').value=x.measurementType||'';$('labPoints').value=x.points||1;$('labNotes').value=x.labNotes||'';$('labEntryModal').classList.add('show')}
+window.openLabEntry=(id,editing=false)=>{const x=samples.find(s=>s.id===id);if(!x)return;$('labEntrySampleId').value=id;$('labEntryCode').textContent=`${x.assignedCode||''} · ${x.company||''}${x.branch?' / '+x.branch:''}`;fillSelect('labAnalyst',simple.responsibles||[],x.labAnalyst||x.createdBy||'');$('labReceivedDate').value=x.receivedDate||new Date().toISOString().slice(0,10);$('labSla').value=x.slaDays||8;$('labMaxDate').value=x.maxReportDate||businessAdd($('labReceivedDate').value,$('labSla').value);$('labCompany').value=x.company||'';$('labBranch').value=x.branch||'';$('labMonitoring').value=x.monitoring||'';$('labMeasurementType').value=x.measurementType||'';$('labPoints').value=x.points||1;$('labNotes').value=x.labNotes||'';$('labEntryModal').classList.add('show')}
 function recalcLabMax(){$('labMaxDate').value=businessAdd($('labReceivedDate').value,$('labSla').value)}
 $('labReceivedDate').onchange=recalcLabMax;$('labSla').oninput=recalcLabMax;
-$('unlockLabBaseData').onclick=()=>{const clave=prompt('Ingrese la contraseña de Calidad para editar los datos base de esta OT:');if(clave===null)return;if(clave!=='CALIDAD'){alert('Contraseña incorrecta. Los datos base permanecen bloqueados.');return}setLabBaseEditMode(true);$('labCompany')?.focus();hist('DESBLOQUEO DE DATOS BASE','Edición temporal autorizada mediante contraseña de Calidad',samples.find(s=>s.id===$('labEntrySampleId').value));};
-$('labEntryForm').onsubmit=e=>{e.preventDefault();const x=samples.find(s=>s.id===$('labEntrySampleId').value);if(!x)return;const changes=[];if(labBaseEditAuthorized){const next={company:$('labCompany').value.trim(),branch:$('labBranch').value.trim(),monitoring:$('labMonitoring').value.trim(),measurementType:$('labMeasurementType').value.trim(),points:Number($('labPoints').value||1)};Object.keys(next).forEach(k=>{const before=labBaseOriginalData?.[k]??'';const after=next[k];if(String(before)!==String(after))changes.push(`${k}: ${before||'—'} → ${after||'—'}`)});x.company=next.company;x.branch=next.branch;x.monitoring=next.monitoring;x.measurementType=next.measurementType;x.points=next.points;}else{x.points=Number($('labPoints').value||x.points||1)}x.receivedDate=$('labReceivedDate').value;x.labAnalyst=$('labAnalyst').value;x.slaDays=Number($('labSla').value||8);x.maxReportDate=$('labMaxDate').value;x.labNotes=$('labNotes').value.trim();const wasPending=x.status==='INFORME_PENDIENTE';x.status='INFORME_PENDIENTE';x.labEntryDate=x.labEntryDate||new Date().toISOString();x.updatedAt=new Date().toISOString();const detail=`${wasPending?'Información modificada':'LABORATORIO → INFORME PENDIENTE'} · Analista: ${x.labAnalyst||'Sin asignar'} · Fecha máxima: ${fmt(x.maxReportDate)}${changes.length?' · DATOS BASE: '+changes.join(' | '):''}`;hist(changes.length?'DATOS BASE Y LABORATORIO ACTUALIZADOS':(wasPending?'DATOS DE LABORATORIO ACTUALIZADOS':'INGRESO OFICIAL AL LABORATORIO'),detail,x);persist();setLabBaseEditMode(false);$('labEntryModal').classList.remove('show');renderAll();showView('laboratorio')}
+$('labEntryForm').onsubmit=e=>{e.preventDefault();const x=samples.find(s=>s.id===$('labEntrySampleId').value);if(!x)return;x.receivedDate=$('labReceivedDate').value;x.labAnalyst=$('labAnalyst').value;x.slaDays=Number($('labSla').value||8);x.maxReportDate=$('labMaxDate').value;x.points=Number($('labPoints').value||1);x.labNotes=$('labNotes').value.trim();const wasPending=x.status==='INFORME_PENDIENTE';x.status='INFORME_PENDIENTE';x.labEntryDate=x.labEntryDate||new Date().toISOString();x.updatedAt=new Date().toISOString();hist(wasPending?'DATOS DE LABORATORIO ACTUALIZADOS':'INGRESO OFICIAL AL LABORATORIO',`${wasPending?'Información modificada':'LABORATORIO → INFORME PENDIENTE'} · Analista: ${x.labAnalyst||'Sin asignar'} · Fecha máxima: ${fmt(x.maxReportDate)}`,x);persist();$('labEntryModal').classList.remove('show');renderAll();showView('laboratorio')}
 window.returnRegistered=id=>{const x=samples.find(s=>s.id===id);if(x&&confirm('¿Devolver para corrección? La fecha de recepción se limpiará.')){x.status='REGISTRADA';x.receivedDate='';x.updatedAt=new Date().toISOString();hist('DEVUELTA A REGISTRO','Laboratorio solicita corrección; recepción OT eliminada',x);persist();renderAll();showView('registradas')}}
 window.removeSample=id=>{const x=samples.find(s=>s.id===id);if(x&&confirm('¿Eliminar definitivamente?')){samples=samples.filter(s=>s.id!==id);hist('MUESTRA ELIMINADA','Registro eliminado',x);persist();renderAll()}}
 function addBranchEditor(b={name:'',frequency:'',records:0,active:true}){const d=document.createElement('div');d.className='branch-row';d.innerHTML=`<div><label>Sucursal / lugar</label><input class="br-name" value="${esc(b.name)}"></div><div><label>Frecuencia</label><input class="br-frequency" value="${esc(b.frequency||'')}"></div><div><label>Estado</label><select class="br-active"><option value="1" ${b.active!==false?'selected':''}>Activa</option><option value="0" ${b.active===false?'selected':''}>Inactiva</option></select></div><button type="button" class="btn danger small">Quitar</button>`;d.querySelector('button').onclick=()=>d.remove();$('branchEditor').appendChild(d)}
@@ -1810,10 +1857,10 @@ $('clearRegisteredSelection').onclick=()=>{selectedRegistered.clear();renderRegi
 $('sendSelectedToLab').onclick=sendSelectedRegisteredToLab;
 if(!$('batchReceptionDate').value)$('batchReceptionDate').value=new Date().toISOString().slice(0,10);
 
-['registeredSortField','registeredSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderRegistered});
-['laboratorySortField','laboratorySortDirection'].forEach(id=>{if($(id))$(id).onchange=renderLab});
-['reportsSortField','reportsSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderReports});
-['billingSortField','billingSortDirection'].forEach(id=>{if($(id))$(id).onchange=renderBilling});
+['registeredSortField','registeredSortDirection','registeredSeriesFilter'].forEach(id=>{if($(id))$(id).onchange=renderRegistered});
+['laboratorySortField','laboratorySortDirection','laboratorySeriesFilter'].forEach(id=>{if($(id))$(id).onchange=renderLab});
+['reportsSortField','reportsSortDirection','reportsSeriesFilter'].forEach(id=>{if($(id))$(id).onchange=renderReports});
+['billingSortField','billingSortDirection','billingSeriesFilter'].forEach(id=>{if($(id))$(id).onchange=renderBilling});
 
 $('searchLab').oninput=renderLab;
 $('selectVisibleLaboratory').onclick=()=>{laboratoryFiltered().forEach(x=>selectedLaboratory.add(String(x.id)));renderLab()};
@@ -2501,7 +2548,7 @@ renderAll();renderBackupCenter();setMessage(`<b>Recuperación completada:</b> ${
 /* ===== V2.0.4g · VALIDACIÓN VISIBLE DE CAMPOS OBLIGATORIOS ===== */
 (function(){
  'use strict';
- const labels={monitoring:'Monitoreo',measurementType:'Tipo de medición',company:'Cliente',workDate:'Fecha inicio del trabajo',identification:'Identificación automática'};
+ const labels={monitoring:'Monitoreo',measurementType:'Tipo de medición',company:'Cliente',identification:'Identificación automática'};
  function toast(msg){
   let t=document.getElementById('validationToastV204g');
   if(!t){t=document.createElement('div');t.id='validationToastV204g';t.style.cssText='position:fixed;right:22px;bottom:22px;z-index:100000;max-width:460px;padding:15px 18px;border-radius:12px;background:#b42318;color:#fff;font-weight:900;box-shadow:0 12px 35px rgba(0,0,0,.25)';document.body.appendChild(t)}
